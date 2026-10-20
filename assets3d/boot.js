@@ -458,7 +458,41 @@ export function createMoss3D(canvas, opts) {
     }
     wasAiming = aimingNow
     prevT = t
-    const mode = working ? WORK : IDLE
+    /* 启动页专用：执行态只做上下点头，不做大幅转动 */
+    const SIMPLE_WORK = [
+      { name: '轻点头', dur: 12, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.85 },
+        { t: 2.4, a1: 2, a2: -1, a3: 20, eye: 1.10 },
+        { t: 3.6, a1: 2, a2: -1, a3: -6, eye: 0.60 },
+        { t: 6.0, a1: 2, a2: -1, a3: 20, eye: 1.10 },
+        { t: 7.2, a1: 2, a2: -1, a3: -6, eye: 0.60 },
+        { t: 9.6, a1: 1, a2: -0.5, a3: 12, eye: 0.95 },
+        { t: 12, a1: 0, a2: 0, a3: 0, eye: 0.85 },
+      ] },
+      { name: '缓慢俯视', dur: 12, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.80 },
+        { t: 3.5, a1: -2, a2: 1, a3: -18, eye: 0.95 },
+        { t: 7.5, a1: -2, a2: 1, a3: -18, eye: 0.62 },
+        { t: 12, a1: 0, a2: 0, a3: 0, eye: 0.80 },
+      ] },
+      { name: '小幅确认', dur: 12, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.82 },
+        { t: 1.6, a1: 1, a2: -0.5, a3: 14, eye: 1.05 },
+        { t: 2.4, a1: 1, a2: -0.5, a3: -4, eye: 0.58 },
+        { t: 4.0, a1: 1, a2: -0.5, a3: 14, eye: 1.05 },
+        { t: 4.8, a1: 1, a2: -0.5, a3: -4, eye: 0.58 },
+        { t: 7.5, a1: 2, a2: -1, a3: 16, eye: 1.00 },
+        { t: 12, a1: 0, a2: 0, a3: 0, eye: 0.82 },
+      ] },
+      { name: '回正', dur: 12, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.80 },
+        { t: 4, a1: 1.5, a2: -0.8, a3: 10, eye: 0.95 },
+        { t: 8, a1: -1, a2: 0.5, a3: -8, eye: 0.88 },
+        { t: 12, a1: 0, a2: 0, a3: 0, eye: 0.78 },
+      ] },
+    ]
+
+    const mode = working ? ((opts && opts.simpleWork) ? SIMPLE_WORK : WORK) : IDLE
     const totalDur = mode.reduce((s2, m) => s2 + m.dur, 0)
     const tt = animTime % totalDur
     let acc = 0
