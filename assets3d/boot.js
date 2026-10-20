@@ -54,6 +54,7 @@ export function createMoss3D(canvas, opts) {
   let active = true
   let healthChecked = false
   let baseY = 0
+  const jointsDisabled = !!(opts && opts.joints === false)
   let last = 0
 
   function resize() {
@@ -301,7 +302,7 @@ export function createMoss3D(canvas, opts) {
       const from = POSES[idx]
       const to = POSES[idx + 1]
       const ang = (k) => ((from[k] + (to[k] - from[k]) * ease) * amp) * Math.PI / 180
-      const frozen = typeof window !== 'undefined' && window.__freeze__
+      const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
       /* J1/J2 = 垂直轴偏航；J3 = 水平 X 轴点头（由手块凸台圆柱拟合得出） */
       if (armTop) armTop.rotation.set(0, frozen ? 0 : ang('a1'), 0)
       if (armMid) armMid.rotation.set(0, frozen ? 0 : ang('a2'), 0)
