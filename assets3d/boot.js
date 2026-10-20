@@ -74,22 +74,24 @@ export function createMoss3D(canvas, opts) {
     const center = box.getCenter(new THREE.Vector3())
     const size = box.getSize(new THREE.Vector3())
     obj.position.sub(center)
+    const baseY = obj.position.y
     scene.add(obj)
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 关节（按参考图逐处核对轴向）─────────────────────────────────
-       参考图里三个红圈对应的轴向并不相同：
-         J1 头顶下方（颈部圆柱的水平缝）：红弧绕水平缝一圈 → 绕【垂直 Y 轴】偏航
-         J2 前臂顶端（前臂圆柱的水平缝）：同样是水平缝 → 绕【垂直 Y 轴】偏航
-         J3 腕部（机身右侧、面向镜头的圆面）：红圈是画面内的整圆 → 绕【朝向镜头的 Z 轴】
-       零件按 y 分布：横梁 79.9~93.4 / 上臂 60.6~79.9 / 前臂 25.0~60.6 / 手 4.3~25.0。
-       层级：obj → p1(J1,Y) → p2(J2,Y) → p3(J3,Z) → 手 + 机身。 */
+    /* ── 关节（轴心来自拟合圆）─────────────────────────────
+       在每个关节高度取截面、迭代拟合圆，得到真实的转轴位置：
+         J1 颈部 y=79.9 轴心 (x=-0.37, z=18.04) r≈5.94
+         J2 肘   y=60.6 轴心 (x=32.92, z=18.04) r≈6.55
+         J3 腕   y=25.0 轴心 (x=35.25, z=18.02) r≈6.64
+       三轴都是垂直 Y 轴。机身螺栓固定在手上 → 归 J3 段，随手腕一起动。 */
     {
       const arm = obj.getObjectByName('Moss_arm')
-      const J1 = 79.9
-      const J2 = 60.6
-      const J3 = 25.0
+      const JOINTS = [
+        { y: 79.9, x: -0.37, z: 18.04 },
+        { y: 60.6, x: 32.92, z: 18.04 },
+        { y: 25.0, x: 35.25, z: 18.02 },
+      ]
       if (arm) {
         const geo = arm.geometry
         const posAttr = geo.attributes.position
@@ -99,7 +101,7 @@ export function createMoss3D(canvas, opts) {
         const M = arm.matrix.clone()
         const parent = arm.parent
 
-        /* 焊接 + 连通块 */
+        /* 焊接 + 连通块，按块中心 y 分段 */
         const weld = new Map()
         const wid = new Int32Array(total)
         for (let i = 0; i < total; i += 1) {
@@ -126,7 +128,7 @@ export function createMoss3D(canvas, opts) {
         const bucketOf = new Map()
         compY.forEach((rec, r) => {
           const mid = (rec.y0 + rec.y1) / 2
-          bucketOf.set(r, mid > J1 ? 0 : mid > J2 ? 1 : mid > J3 ? 2 : 3)
+          bucketOf.set(r, mid > JOINTS[0].y ? 0 : mid > JOINTS[1].y ? 1 : mid > JOINTS[2].y ? 2 : 3)
         })
         const buckets = [[], [], [], []]
         for (let i = 0; i < total; i += 3) buckets[bucketOf.get(find(wid[i]))].push(i)
@@ -154,7 +156,6 @@ export function createMoss3D(canvas, opts) {
           return g2
         }
 
-        /* 所有分段先挂到 obj 下，保证 attach 时世界矩阵正确 */
         const makePart = (triStarts) => {
           const m = new THREE.Mesh(buildSub(triStarts), arm.material)
           m.frustumCulled = false
@@ -164,49 +165,25 @@ export function createMoss3D(canvas, opts) {
           m.updateMatrixWorld(true)
           return m
         }
-        const jointPos = (y) => {
-          let sx = 0; let sz = 0; let n = 0
-          for (let i = 0; i < total; i += 1) {
-            tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
-            if (Math.abs(tmp.y - y) < 3) { sx += tmp.x; sz += tmp.z; n += 1 }
-          }
-          return new THREE.Vector3(n ? sx / n : 0, y, n ? sz / n : 0)
-        }
 
         const headMesh = makePart(buckets[0])
         const upperMesh = makePart(buckets[1])
         const foreMesh = makePart(buckets[2])
         const handMesh = makePart(buckets[3])
 
-        const P1 = jointPos(J1)
-        const P2 = jointPos(J2)
-        const P3 = jointPos(J3)
-
-        /* 嵌套枢轴：p1 → p2 → p3，起始无旋转，所以位置直接用差值 */
-        const p1 = new THREE.Group(); p1.position.copy(P1); parent.add(p1); parent.updateMatrixWorld(true)
+        /* 枢轴 = 真实轴心，不是截面质心 */
+        const P = JOINTS.map((j) => new THREE.Vector3(j.x, j.y, j.z))
+        const p1 = new THREE.Group(); p1.position.copy(P[0]); parent.add(p1); parent.updateMatrixWorld(true)
         p1.attach(upperMesh)
-
-        const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
+        const p2 = new THREE.Group(); p2.position.copy(P[1]).sub(P[0]); p1.add(p2); p1.updateMatrixWorld(true)
         p2.attach(foreMesh)
-
-        const p3 = new THREE.Group(); p3.position.copy(P3).sub(P2); p2.add(p3); p2.updateMatrixWorld(true)
+        const p3 = new THREE.Group(); p3.position.copy(P[2]).sub(P[1]); p2.add(p3); p2.updateMatrixWorld(true)
         p3.attach(handMesh)
         ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
           const part = obj.getObjectByName(nm)
           if (part) p3.attach(part)
         })
 
-        if (typeof window !== 'undefined' && window.__colorParts__) {
-          const tint = (mesh, hex) => { if (mesh) mesh.material = new THREE.MeshBasicMaterial({ color: hex }) }
-          tint(headMesh, 0x8899aa)   /* 固定 */
-          tint(upperMesh, 0xff5533)  /* J1 */
-          tint(foreMesh, 0x33dd77)   /* J2 */
-          tint(handMesh, 0x3399ff)   /* J3 */
-          ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
-            const part = obj.getObjectByName(nm)
-            if (part) { part.material = new THREE.MeshBasicMaterial({ color: 0x3399ff }) }
-          })
-        }
         arm.visible = false
         armTop = p1
         armMid = p2
