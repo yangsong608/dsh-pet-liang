@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '29'
+    var ASSET_V = '31'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -403,6 +403,35 @@ window.__ModuleLoader__.load({
       })
     }
 
+    /* MOSS 关节动画：三帧同机位硬切换（无淡入，不会重影） */
+    var jointTimer = null
+    var jointPhase = 0
+    var JOINT_MS = 2300
+
+    function stopJoint() {
+      if (jointTimer) {
+        clearInterval(jointTimer)
+        jointTimer = null
+      }
+      jointPhase = 0
+    }
+
+    function startJoint() {
+      if (jointTimer) return
+      jointTimer = setInterval(function () {
+        if (!overlay) return
+        var char = overlay.getAttribute('data-character')
+        var working = overlay.getAttribute('data-working') === '1'
+        if (char !== 'moss' || working) return
+        var fig = overlay.querySelector('.figure')
+        if (!fig) return
+        jointPhase = jointPhase ? 0 : 1
+        var next = jointPhase ? 'moss-idle-b.webp' : 'moss-idle-a.webp'
+        fig.src = assetUrl(next)
+        fig.setAttribute('data-asset', next)
+      }, JOINT_MS)
+    }
+
     function buildOverlay() {
       ensureStyle()
       var existing = document.getElementById(ROOT_ID)
@@ -460,7 +489,12 @@ window.__ModuleLoader__.load({
         }
       })
 
+      ;['moss-idle-a.webp', 'moss-idle-b.webp', 'moss-work.webp'].forEach(function (name) {
+        try { var img = new Image(); img.src = assetUrl(name) } catch (e) { /* noop */ }
+      })
+
       document.body.appendChild(root)
+      startJoint()
       restorePosition(root)
       bindDrag(root)
       overlay = root
@@ -506,6 +540,8 @@ window.__ModuleLoader__.load({
       if (aura) aura.style.background = 'radial-gradient(circle,' + state.aura + ' 0%, transparent 68%)'
       if (aura) aura.style.opacity = String(0.3 + state.glow * 0.55)
 
+
+      startJoint()
 
       if (!figure) return
       var nextChar = state.character
