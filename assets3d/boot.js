@@ -50,6 +50,10 @@ export function createMoss3D(canvas, opts) {
   let aimTarget = null
   const aimCur = { yaw: 0, pitch: 0 }
   let aimBlend = 0   /* 0 = 完全脚本姿态，1 = 完全跟随鼠标 */
+  /* 默认动效的独立时间轴：拖动时暂停，松手后从暂停处继续 */
+  let animTime = 0
+  let prevT = 0
+  let wasAiming = false
   let armTop = null
   let armMid = null
   let armWrist = null
@@ -443,9 +447,19 @@ export function createMoss3D(canvas, opts) {
       ] },
     ]
 
+    /* 拖动期间停止默认动效；松手后从第一组重新开始 */
+    const aimingNow = !!aimTarget
+    if (aimingNow) {
+      /* 暂停：时间轴不推进 */
+    } else {
+      if (wasAiming) animTime = 0   /* 松手 → 回到第一组开头 */
+      animTime += Math.min(0.12, Math.max(0, t - prevT)) * speed
+    }
+    wasAiming = aimingNow
+    prevT = t
     const mode = working ? WORK : IDLE
     const totalDur = mode.reduce((s2, m) => s2 + m.dur, 0)
-    const tt = (t * speed) % totalDur
+    const tt = animTime % totalDur
     let acc = 0
     let move = mode[mode.length - 1]
     for (const m of mode) {
@@ -470,9 +484,9 @@ export function createMoss3D(canvas, opts) {
     const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
     /* 空闲态叠加极缓慢的微动（周期 60~110s），避免长时间保持一个姿态像卡住 */
     const micro = working ? 0 : 1
-    const m1 = Math.sin((t / 87) * Math.PI * 2) * 0.55 * micro
-    const m2 = Math.sin((t / 103) * Math.PI * 2 + 1.1) * 0.35 * micro
-    const m3 = Math.sin((t / 71) * Math.PI * 2 + 2.3) * 0.45 * micro
+    const m1 = Math.sin((animTime / 87) * Math.PI * 2) * 0.55 * micro
+    const m2 = Math.sin((animTime / 103) * Math.PI * 2 + 1.1) * 0.35 * micro
+    const m3 = Math.sin((animTime / 71) * Math.PI * 2 + 2.3) * 0.45 * micro
     let deg1 = mix('a1') + m1
     let deg2 = mix('a2') + m2
     let deg3 = mix('a3') + m3
@@ -505,7 +519,7 @@ export function createMoss3D(canvas, opts) {
 
     /* 红眼：亮度来自脚本，另叠加极轻微呼吸，避免死板 */
     const eyeBase = frozen ? 0.45 : mix('eye')
-    const breathe = 1 + Math.sin(t * 2.1 * speed) * 0.04
+    const breathe = 1 + Math.sin(animTime * 2.1) * 0.04
     const eye = Math.max(0, Math.min(1.3, eyeBase * breathe))
     if (eyeCore) eyeCore.material.opacity = 0.35 + eye * 0.55
     if (eyeHalo) {
