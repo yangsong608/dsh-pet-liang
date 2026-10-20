@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '8'
+    var ASSET_V = '10'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -233,17 +233,22 @@ window.__ModuleLoader__.load({
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
             /* 梁神：透明底立绘，直接浮着（不画圆框、不加背景） */
       '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:auto;max-width:176px;max-height:176px;}',
-      '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:0;width:158px;height:30px;transform:translateX(-50%);',
-      'pointer-events:none;border-radius:50%;opacity:.18;',
-      'background:radial-gradient(ellipse at center,color-mix(in srgb,var(--dpl-aura) 55%,transparent) 0%,transparent 72%);',
-      'animation:dpl-breathe 4.2s ease-in-out infinite;}',
-      '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.95;animation:dpl-pulse 1.7s ease-in-out infinite;}',
-      '#' + ROOT_ID + ' .dpl-ring::after{content:"";position:absolute;left:8%;right:8%;top:38%;height:1px;border-radius:1px;',
-      'background:linear-gradient(90deg,transparent,var(--dpl-aura),transparent);opacity:.65;}',
+      '#' + ROOT_ID + ' .dpl-pedestal{position:absolute;left:50%;bottom:-6px;width:168px;transform:translateX(-50%);',
+      'pointer-events:none;opacity:.55;animation:dpl-ped-glow 5.4s ease-in-out infinite;}',
+      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-pedestal{opacity:.82;}',
+      '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:0;width:150px;height:28px;transform:translateX(-50%);',
+      'pointer-events:none;border-radius:50%;opacity:.24;',
+      'background:radial-gradient(ellipse at center,color-mix(in srgb,var(--dpl-aura) 68%,transparent) 0%,transparent 72%);',
+      'animation:dpl-ring-spin 5.5s linear infinite;}',
+      '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.82;animation:dpl-ring-spin 1.8s linear infinite;}',
+      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-ring{opacity:.5;}',
+      'body[data-ds-dark-theme] #' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.9;}',
+      '#' + ROOT_ID + ' .dpl-ring::after{content:"";position:absolute;left:4%;right:4%;top:36%;height:1.5px;border-radius:2px;',
+      'background:linear-gradient(90deg,transparent,var(--dpl-aura),transparent);opacity:.7;}',
       '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:-8px;width:168px;height:186px;transform:translateX(-50%);',
       'overflow:hidden;pointer-events:none;opacity:0;border-radius:50%;}',
       '#' + ROOT_ID + ' .dpl-scan::after{content:"";position:absolute;left:0;width:100%;height:16px;filter:blur(4px);',
-      'background:linear-gradient(to bottom,transparent,var(--dpl-aura),transparent);opacity:.42;',
+      'background:linear-gradient(to bottom,transparent,var(--dpl-aura),transparent);opacity:.62;',
       '-webkit-mask-image:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent);',
       'mask-image:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent);}',
       '#' + ROOT_ID + '.is-switching .dpl-scan{opacity:1;}',
@@ -261,6 +266,8 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + '[data-working="1"] .dpl-dot{animation:dpl-blink 1.1s ease-in-out infinite;}',
       '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
       '@keyframes dpl-pulse{0%,100%{opacity:.5;filter:blur(0)}50%{opacity:1;filter:blur(1px)}}',
+      '@keyframes dpl-ring-spin{0%{transform:translateX(-50%) rotate(0deg) scaleX(1)}50%{transform:translateX(-50%) rotate(180deg) scaleX(.84)}100%{transform:translateX(-50%) rotate(360deg) scaleX(1)}}',
+      '@keyframes dpl-ped-glow{0%,100%{opacity:.45;filter:blur(0px)}50%{opacity:.75;filter:blur(2px)}}',
       '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
       '@keyframes dpl-blink{0%,100%{opacity:.25}50%{opacity:1}}',
       '@keyframes dpl-sweep{0%{top:-24px}100%{top:200px}}',
@@ -405,9 +412,14 @@ window.__ModuleLoader__.load({
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-idle.webp')
       figure.setAttribute('data-char', 'moss')
+      var pedestal = el('img', 'dpl-pedestal')
+      pedestal.src = assetUrl('holo-pedestal.webp')
+      pedestal.alt = ''
+      pedestal.draggable = false
       var ring = el('div', 'dpl-ring')
       var scan = el('div', 'dpl-scan')
       stage.appendChild(aura)
+      stage.appendChild(pedestal)
       stage.appendChild(ring)
       stage.appendChild(figure)
       stage.appendChild(scan)
