@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '73'
+    var ASSET_V = '74'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -461,6 +461,54 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /** 右键按住拖动：机身跟随鼠标转动（三个关节协同） */
+    function bindAim(root) {
+      var aiming = false
+      var pointerId = null
+
+      function apply(clientX, clientY) {
+        if (!moss3d || !moss3d.aim) return
+        var rect = root.getBoundingClientRect()
+        var cx = rect.left + rect.width / 2
+        var cy = rect.top + rect.height / 2
+        /* 以宠物对角线的一半为参考半径，超出就到最大角度 */
+        var r = Math.max(60, Math.min(rect.width, rect.height))
+        moss3d.aim((clientX - cx) / r, (clientY - cy) / r)
+      }
+
+      root.addEventListener('contextmenu', function (event) {
+        event.preventDefault()
+      })
+
+      root.addEventListener('pointerdown', function (event) {
+        if (event.button !== 2) return
+        event.preventDefault()
+        event.stopPropagation()
+        aiming = true
+        pointerId = event.pointerId
+        try { root.setPointerCapture(pointerId) } catch (e) { /* noop */ }
+        apply(event.clientX, event.clientY)
+      })
+
+      root.addEventListener('pointermove', function (event) {
+        if (!aiming || event.pointerId !== pointerId) return
+        apply(event.clientX, event.clientY)
+      })
+
+      function stop() {
+        if (!aiming) return
+        aiming = false
+        if (moss3d && moss3d.aim) moss3d.aim(null)
+        if (pointerId !== null) {
+          try { root.releasePointerCapture(pointerId) } catch (e) { /* noop */ }
+          pointerId = null
+        }
+      }
+      root.addEventListener('pointerup', stop)
+      root.addEventListener('pointercancel', stop)
+      root.addEventListener('pointerleave', function () { if (aiming) stop() })
+    }
+
     function ensure3d(canvas) {
       if (moss3d || moss3dBroken || moss3dTried) return
       moss3dTried = true
@@ -558,6 +606,7 @@ window.__ModuleLoader__.load({
       document.body.appendChild(root)
       restorePosition(root)
       bindDrag(root)
+      bindAim(root)
       overlay = root
       paint(current, false)
       return root

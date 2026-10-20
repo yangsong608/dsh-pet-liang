@@ -46,6 +46,9 @@ export function createMoss3D(canvas, opts) {
   let lensLamp = null
   let eyeCore = null
   let eyeHalo = null
+  /* 鼠标拖动瞄准：nx/ny ∈ [-1,1]，null 表示释放 */
+  let aimTarget = null
+  const aimCur = { yaw: 0, pitch: 0 }
   let armTop = null
   let armMid = null
   let armWrist = null
@@ -469,9 +472,34 @@ export function createMoss3D(canvas, opts) {
     const m1 = Math.sin((t / 87) * Math.PI * 2) * 0.55 * micro
     const m2 = Math.sin((t / 103) * Math.PI * 2 + 1.1) * 0.35 * micro
     const m3 = Math.sin((t / 71) * Math.PI * 2 + 2.3) * 0.45 * micro
-    const A1 = frozen ? 0 : ((mix('a1') + m1) * motionAmp * Math.PI) / 180
-    const A2 = frozen ? 0 : ((mix('a2') + m2) * motionAmp * Math.PI) / 180
-    const A3 = frozen ? 0 : ((mix('a3') + m3) * motionAmp * Math.PI) / 180
+    let deg1 = mix('a1') + m1
+    let deg2 = mix('a2') + m2
+    let deg3 = mix('a3') + m3
+
+    /* 拖动瞄准：把目标方向分配给三个关节（颈部 60% / 中臂 40% 偏航，腕部俯仰） */
+    if (aimTarget) {
+      const lerp = 0.18
+      aimCur.yaw += (aimTarget.yaw - aimCur.yaw) * lerp
+      aimCur.pitch += (aimTarget.pitch - aimCur.pitch) * lerp
+      deg1 = aimCur.yaw * 0.6
+      deg2 = aimCur.yaw * 0.4
+      deg3 = aimCur.pitch
+    } else if (aimCur.yaw !== 0 || aimCur.pitch !== 0) {
+      /* 松手后平滑回到脚本姿态 */
+      aimCur.yaw += (0 - aimCur.yaw) * 0.08
+      aimCur.pitch += (0 - aimCur.pitch) * 0.08
+      if (Math.abs(aimCur.yaw) < 0.02) aimCur.yaw = 0
+      if (Math.abs(aimCur.pitch) < 0.02) aimCur.pitch = 0
+      if (aimCur.yaw !== 0 || aimCur.pitch !== 0) {
+        deg1 = aimCur.yaw * 0.6
+        deg2 = aimCur.yaw * 0.4
+        deg3 = aimCur.pitch
+      }
+    }
+
+    const A1 = frozen ? 0 : (deg1 * motionAmp * Math.PI) / 180
+    const A2 = frozen ? 0 : (deg2 * motionAmp * Math.PI) / 180
+    const A3 = frozen ? 0 : (deg3 * motionAmp * Math.PI) / 180
     if (armTop) armTop.rotation.set(0, A1, 0)
     if (armMid) armMid.rotation.set(0, A2, 0)
     if (armWrist) armWrist.rotation.set(A3, 0, 0)
@@ -501,6 +529,13 @@ export function createMoss3D(canvas, opts) {
   }
 
   return {
+    /** 拖动瞄准：nx/ny ∈ [-1,1]；传 null 释放 */
+    aim(nx, ny) {
+      if (nx === null || nx === undefined) { aimTarget = null; return }
+      const mx = Math.max(-1, Math.min(1, nx))
+      const my = Math.max(-1, Math.min(1, ny))
+      aimTarget = { yaw: mx * 34, pitch: -my * 16 }
+    },
     setWorking(v) { working = !!v },
     setActive(v) {
       active = !!v
