@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '44'
+    var ASSET_V = '46'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -453,6 +453,7 @@ window.__ModuleLoader__.load({
       import(boot).then(function (mod) {
         moss3d = mod.createMoss3D(canvas, {
           base: BASE + '/3d/',
+          ver: ASSET_V,
           onError: function () {
             moss3dBroken = true
             canvas.classList.remove('ready')
@@ -598,6 +599,8 @@ window.__ModuleLoader__.load({
         if (figure) figure.style.visibility = use3d ? 'hidden' : ''
         var fa = overlay.querySelector('.forearm')
         if (fa) fa.style.visibility = use3d ? 'hidden' : ''
+        var coreEl = overlay.querySelector('.core')
+        if (coreEl) coreEl.style.display = use3d ? 'none' : ''
       }
 
       if (!figure) return

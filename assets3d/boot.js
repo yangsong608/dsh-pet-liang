@@ -7,6 +7,8 @@ const HAVE = new Set(['Main_base', 'Main_normal', 'Main_emissive', 'Main_orm', '
 
 export function createMoss3D(canvas, opts) {
   const base = opts && opts.base ? opts.base : ''
+  const ver = opts && opts.ver ? String(opts.ver) : ''
+  const url = (p) => base + p + (ver ? '?v=' + ver : '')
   const onError = (opts && opts.onError) || function () {}
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, powerPreference: 'low-power' })
   renderer.setClearColor(0x000000, 0)
@@ -20,11 +22,14 @@ export function createMoss3D(canvas, opts) {
   const rim = new THREE.DirectionalLight(0xffd9a0, 0.9); rim.position.set(-20, -50, 40); scene.add(rim)
 
   const loader = new THREE.TextureLoader()
-  const texS = (n) => { const t = loader.load(base + 'tex/' + n + '.webp'); t.colorSpace = THREE.SRGBColorSpace; return t }
-  const texL = (n) => loader.load(base + 'tex/' + n + '.webp')
+  const texS = (n) => { const t = loader.load(url('tex/' + n + '.webp')); t.colorSpace = THREE.SRGBColorSpace; return t }
+  const texL = (n) => loader.load(url('tex/' + n + '.webp'))
 
   let pivot = null
   let objRoot = null
+  let lensCore = null
+  let lensHalo = null
+  let lensLamp = null
   let working = false
   let disposed = false
   let raf = 0
@@ -42,7 +47,7 @@ export function createMoss3D(canvas, opts) {
     camera.updateProjectionMatrix()
   }
 
-  new FBXLoader().load(base + 'moss.fbx', (obj) => {
+  new FBXLoader().load(url('moss.fbx'), (obj) => {
     obj.traverse((n) => {
       if (!n.isMesh) return
       const k = KEY[n.material.name] || 'Main'
@@ -83,6 +88,58 @@ export function createMoss3D(canvas, opts) {
       pivot.attach(arm)
     }
 
+    /* 红眼：模型自带发光贴图只有 3 个 LED 点，主镜头没做发光，这里补一层 */
+    const mainMesh = obj.getObjectByName('Moss_Main')
+    if (mainMesh) {
+      const mb = new THREE.Box3().setFromObject(mainMesh)
+      const ms = mb.getSize(new THREE.Vector3())
+      const mc = mb.getCenter(new THREE.Vector3())
+      /* 镜头在机身正面中心偏左上（按渲染结果标定） */
+      const lensPos = new THREE.Vector3(
+        mc.x + ms.x * 0.105,
+        mc.y + ms.y * 0.142,
+        mb.max.z + ms.z * 0.02,
+      )
+      const radius = Math.min(ms.x, ms.y) * 0.105
+
+      const core = new THREE.Mesh(
+        new THREE.CircleGeometry(radius, 32),
+        new THREE.MeshBasicMaterial({
+          color: 0xff4a22, transparent: true, opacity: 0.95,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        }),
+      )
+      core.position.copy(lensPos)
+      core.renderOrder = 5
+      scene.add(core)
+
+      /* 柔光晕：径向渐变贴图 */
+      const cvs = document.createElement('canvas')
+      cvs.width = cvs.height = 128
+      const ctx = cvs.getContext('2d')
+      const g = ctx.createRadialGradient(64, 64, 2, 64, 64, 64)
+      g.addColorStop(0, 'rgba(255,120,60,0.95)')
+      g.addColorStop(0.35, 'rgba(255,70,30,0.45)')
+      g.addColorStop(1, 'rgba(255,40,20,0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, 128, 128)
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(cvs), transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9,
+      }))
+      halo.position.copy(lensPos).add(new THREE.Vector3(0, 0, ms.z * 0.01))
+      halo.scale.setScalar(radius * 10)
+      halo.userData.base = radius * 10
+      halo.renderOrder = 6
+      scene.add(halo)
+      const lensLight = new THREE.PointLight(0xff3a14, working ? 3.2 : 1.5, ms.y * 0.9, 2)
+      lensLight.position.copy(lensPos).add(new THREE.Vector3(0, 0, ms.z * 0.35))
+      scene.add(lensLight)
+      lensCore = core
+      lensHalo = halo
+      lensLamp = lensLight
+    }
+
     /* 以机身（Moss_Main）为视觉中心，竖向撑满画布 */
     const main = obj.getObjectByName('Moss_Main')
     let focusX = 0
@@ -116,6 +173,17 @@ export function createMoss3D(canvas, opts) {
       pivot.rotation.x = Math.sin(t * 0.55 * speed + 1.1) * (amp * 0.28 * Math.PI / 180)
     }
     if (objRoot) objRoot.rotation.y = Math.sin(t * 0.35) * 0.03
+    if (lensCore && lensHalo) {
+      /* 空闲：暗红呼吸；执行：亮起并快速脉冲 */
+      const base = working ? 0.95 : 0.55
+      const k = working ? 0.45 : 0.18
+      const pulse = base + Math.sin(t * (working ? 5.2 : 1.6)) * k
+      lensCore.material.opacity = Math.max(0.15, Math.min(1, pulse))
+      lensCore.material.color.setHex(working ? 0xff2a0c : 0xff5a2c)
+      if (lensLamp) lensLamp.intensity = (working ? 3.4 : 1.4) * (0.85 + 0.15 * Math.sin(t * (working ? 5.2 : 1.6)))
+      lensHalo.material.opacity = Math.max(0.12, Math.min(1, pulse * 0.85))
+      lensHalo.scale.setScalar((lensHalo.userData.base || lensHalo.scale.x) * (1 + (working ? 0.06 : 0.03) * Math.sin(t * (working ? 5.2 : 1.6))))
+    }
     renderer.render(scene, camera)
   }
 
