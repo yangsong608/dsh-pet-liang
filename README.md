@@ -36,7 +36,9 @@
 
 ## B 站小窗是怎么来的
 
-点击形象时，插件会去找 dsh-bili-widget 的悬浮球 `.dy-launch`，给它补发一对 `pointerdown`/`pointerup`——它的开合完全由这个悬浮球驱动（浮窗自带拉伸、迷你、历史、快捷键），所以这里不重新实现一遍，直接复用。悬浮球本身用注入的 CSS 隐藏（`opacity:0; pointer-events:none`），开窗后再用它的拖拽条把窗口摆到桌宠左侧，避免默认落在屏幕左上角。找不到这个元素（没装插件）才退回内置的简化列表：`/api/bili` 代理热门/排行、`/api/bili-img` 只放行 B 站图床、播放用官方 `player.bilibili.com` iframe。
+点击形象打开内置的 B 站小窗：**标题栏拖动、右下角缩放、位置/大小写入 localStorage**；「热门 / 排行」两档，列表来自宿主代理的 B 站公开接口，封面走白名单图片代理，点条目在窗内用 `player.bilibili.com` iframe 播放，`← 返回` / `Esc` 逐级退出。
+
+> 早前试过复用 `dsh-bili-widget`：它在本机（macOS）的宿主半会 `spawn curl.exe`（Windows 路径）失败，导致列表为空、播放不可用，而且它自己的窗口状态会和外部拖动打架。已卸载，改为本插件自带窗口。找不到这个元素（没装插件）才退回内置的简化列表：`/api/bili` 代理热门/排行、`/api/bili-img` 只放行 B 站图床、播放用官方 `player.bilibili.com` iframe。
 
 宿主仍保留 `GET /dsh-pet-liang/api/cost`（会话 token 与人民币折算），点击行为已经改成 B 站，费用接口目前没有 UI 入口。
 

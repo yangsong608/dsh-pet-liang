@@ -227,14 +227,14 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + '.is-dragging .dpl-stage{cursor:grabbing;}',
       '#' + ROOT_ID + '.is-dragging .dpl-figure{animation-play-state:paused;}',
       '#' + ROOT_ID + ' .dpl-aura{position:absolute;left:50%;bottom:34px;width:190px;height:150px;transform:translateX(-50%);',
-      'filter:blur(18px);opacity:.55;border-radius:50%;transition:background .6s ease,opacity .6s ease;}',
-      '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;mix-blend-mode:screen;',
+      'filter:blur(22px);opacity:.12;border-radius:50%;transition:background .6s ease,opacity .6s ease;}',
+      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-aura{opacity:.55;}',
       'animation:dpl-breathe 4.2s ease-in-out infinite;}',
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
             /* 梁神：透明底立绘，直接浮着（不画圆框、不加背景） */
       '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:auto;max-width:176px;max-height:176px;}',
       '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:0;width:158px;height:30px;transform:translateX(-50%);',
-      'pointer-events:none;border-radius:50%;opacity:.55;',
+      'pointer-events:none;border-radius:50%;opacity:.18;',
       'background:radial-gradient(ellipse at center,color-mix(in srgb,var(--dpl-aura) 55%,transparent) 0%,transparent 72%);',
       'animation:dpl-breathe 4.2s ease-in-out infinite;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.95;animation:dpl-pulse 1.7s ease-in-out infinite;}',
@@ -259,40 +259,6 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .dpl-model[data-unknown="1"]{opacity:.6;color:#c98b3a;}',
       '#' + ROOT_ID + ' .dpl-dot{width:5px;height:5px;border-radius:50%;background:var(--dpl-aura);opacity:.8;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-dot{animation:dpl-blink 1.1s ease-in-out infinite;}',
-      /* B 站小窗 */
-      '#' + ROOT_ID + ' .dpl-bili{position:absolute;right:0;bottom:calc(100% - 6px);width:344px;',
-      'border-radius:14px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#0d1117) 94%,transparent);',
-      'border:1px solid color-mix(in srgb,var(--dpl-aura) 30%,transparent);',
-      'box-shadow:0 18px 44px rgba(0,0,0,.5);backdrop-filter:blur(16px);overflow:hidden;}',
-      '#' + ROOT_ID + ' .dpl-bili[hidden]{display:none;}',
-      '#' + ROOT_ID + ' .dpl-bili-head{display:flex;align-items:center;gap:8px;padding:8px 10px;',
-      'border-bottom:1px solid rgba(255,255,255,.06);}',
-      '#' + ROOT_ID + ' .dpl-bili-title{font-size:11px;font-weight:700;letter-spacing:.1em;',
-      'text-transform:uppercase;color:var(--dpl-aura);opacity:.9;}',
-      '#' + ROOT_ID + ' .dpl-bili-tabs{display:flex;gap:4px;margin-left:auto;}',
-      '#' + ROOT_ID + ' .dpl-bili-tabs button,#' + ROOT_ID + ' .dpl-bili-close{',
-      'font:inherit;font-size:10.5px;padding:3px 7px;border-radius:6px;cursor:pointer;',
-      'color:var(--dsw-alias-label-secondary,#9aa7b8);background:rgba(255,255,255,.05);',
-      'border:1px solid rgba(255,255,255,.08);}',
-      '#' + ROOT_ID + ' .dpl-bili-tabs button[data-active="1"]{color:#0b0e13;background:var(--dpl-aura);border-color:transparent;}',
-      '#' + ROOT_ID + ' .dpl-bili-close{padding:3px 6px;line-height:1;}',
-      '#' + ROOT_ID + ' .dpl-bili-body{max-height:330px;overflow-y:auto;overscroll-behavior:contain;}',
-      '#' + ROOT_ID + ' .dpl-bili-body::-webkit-scrollbar{width:6px;}',
-      '#' + ROOT_ID + ' .dpl-bili-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px;}',
-      '#' + ROOT_ID + ' .dpl-bili-item{display:flex;gap:8px;padding:7px 10px;cursor:pointer;align-items:center;}',
-      '#' + ROOT_ID + ' .dpl-bili-item:hover{background:rgba(255,255,255,.05);}',
-      '#' + ROOT_ID + ' .dpl-bili-item img{width:74px;height:46px;object-fit:cover;border-radius:6px;flex:none;',
-      'background:rgba(255,255,255,.06);}',
-      '#' + ROOT_ID + ' .dpl-bili-meta{min-width:0;flex:1;}',
-      '#' + ROOT_ID + ' .dpl-bili-name{font-size:11.5px;line-height:1.35;max-height:2.7em;overflow:hidden;',
-      'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}',
-      '#' + ROOT_ID + ' .dpl-bili-sub{font-size:10px;opacity:.5;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-      '#' + ROOT_ID + ' .dpl-bili-note{padding:14px;font-size:11px;opacity:.65;text-align:center;line-height:1.6;}',
-      '#' + ROOT_ID + ' .dpl-bili-play{position:relative;background:#000;}',
-      '#' + ROOT_ID + ' .dpl-bili-play iframe{display:block;width:100%;height:196px;border:0;background:#000;}',
-      '#' + ROOT_ID + ' .dpl-bili-back{position:absolute;left:8px;top:8px;z-index:2;font-size:10.5px;padding:3px 7px;',
-      'border-radius:6px;cursor:pointer;color:#e8edf5;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.14);}',
-      '#' + ROOT_ID + ' .dpl-bili-foot{padding:6px 10px;font-size:9.5px;opacity:.42;border-top:1px solid rgba(255,255,255,.06);}',
       '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
       '@keyframes dpl-pulse{0%,100%{opacity:.5;filter:blur(0)}50%{opacity:1;filter:blur(1px)}}',
       '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
@@ -456,10 +422,6 @@ window.__ModuleLoader__.load({
       hud.appendChild(stateNode)
       hud.appendChild(modelNode)
 
-      var bili = el('div', 'dpl-bili')
-      bili.hidden = true
-
-      root.appendChild(bili)
       root.appendChild(stage)
       root.appendChild(hud)
 
@@ -468,21 +430,14 @@ window.__ModuleLoader__.load({
       root.addEventListener('click', function (event) {
         event.stopPropagation()
         if (suppressClick) return
-        if (event.target && event.target.closest && event.target.closest('.dpl-bili')) return
-        /* 装了 dsh-bili-widget 就用它那个完整浮窗；没装才用内置的简单列表 */
-        if (toggleBiliWidget()) {
-          if (biliOpen) closeBili()
-          return
-        }
         void toggleBili()
       })
-      document.addEventListener('click', function () {
-        if (biliOpen) closeBili()
-      })
+      /* 不再「点外面就关」：拖动/缩放结束时的 click 会误伤，关窗只用 × / Esc / 再点一次桌宠 */
       document.addEventListener('keydown', function (event) {
         if (!biliOpen || event.key !== 'Escape') return
         if (biliMode === 'player') {
           biliMode = 'list'
+          biliCurrent = null
           renderBili()
         } else {
           closeBili()
@@ -577,6 +532,199 @@ window.__ModuleLoader__.load({
 
     /* ────────────────────────── B 站小窗 ────────────────────────── */
 
+    var BW_ID = 'dsh-pet-liang-bili'
+    var BW_STATE_KEY = 'dsh-pet-liang:bili-window'
+
+    var bw = null                 // 窗口根节点
+    var biliOpen = false
+    var biliKind = 'hot'
+    var biliMode = 'list'
+    var biliList = null
+    var biliError = ''
+    var biliCurrent = null
+    var bwDrag = null
+
+    function bwStyle() {
+      return [
+        '#' + BW_ID + '{position:fixed;z-index:2147483200;display:flex;flex-direction:column;',
+        'border-radius:14px;overflow:hidden;color:#e8edf5;',
+        'background:rgba(13,17,23,.96);',
+        'border:1px solid color-mix(in srgb,var(--dpl-aura,#7f8ea3) 32%,transparent);',
+        'box-shadow:0 22px 60px rgba(0,0,0,.55);backdrop-filter:blur(16px);',
+        'font-family:ui-sans-serif,system-ui,"PingFang SC",sans-serif;}',
+        '#' + BW_ID + '[hidden]{display:none;}',
+        '#' + BW_ID + ' .bw-head{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:grab;flex:none;',
+        'border-bottom:1px solid rgba(255,255,255,.07);touch-action:none;}',
+        '#' + BW_ID + '.bw-dragging .bw-head{cursor:grabbing;}',
+        '#' + BW_ID + ' .bw-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;',
+        'color:var(--dpl-aura,#7f8ea3);}',
+        '#' + BW_ID + ' .bw-tabs{display:flex;gap:4px;margin-left:auto;}',
+        '#' + BW_ID + ' .bw-tabs button,#' + BW_ID + ' .bw-close{font:inherit;font-size:10.5px;padding:3px 8px;',
+        'border-radius:6px;cursor:pointer;color:#9aa7b8;',
+        'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);}',
+        '#' + BW_ID + ' .bw-tabs button[data-active="1"]{color:#0b0e13;background:var(--dpl-aura,#7f8ea3);border-color:transparent;}',
+        '#' + BW_ID + ' .bw-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;}',
+        '#' + BW_ID + ' .bw-body.bw-body--play{overflow:hidden;display:flex;flex-direction:column;}',
+        '#' + BW_ID + ' .bw-body::-webkit-scrollbar{width:8px;}',
+        '#' + BW_ID + ' .bw-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:4px;}',
+        '#' + BW_ID + ' .bw-item{display:flex;gap:9px;padding:8px 10px;cursor:pointer;align-items:center;}',
+        '#' + BW_ID + ' .bw-item:hover{background:rgba(255,255,255,.06);}',
+        '#' + BW_ID + ' .bw-item img{width:92px;height:58px;object-fit:cover;border-radius:7px;flex:none;background:rgba(255,255,255,.06);}',
+        '#' + BW_ID + ' .bw-meta{min-width:0;flex:1;}',
+        '#' + BW_ID + ' .bw-name{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}',
+        '#' + BW_ID + ' .bw-sub{font-size:10px;opacity:.5;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+        '#' + BW_ID + ' .bw-note{padding:18px 14px;font-size:11.5px;opacity:.7;text-align:center;line-height:1.6;}',
+        '#' + BW_ID + ' .bw-play{position:relative;flex:1;min-height:0;background:#000;}',
+        '#' + BW_ID + ' .bw-play iframe{display:block;width:100%;height:100%;border:0;background:#000;}',
+        '#' + BW_ID + ' .bw-back{position:absolute;left:8px;top:8px;z-index:2;font-size:10.5px;padding:3px 8px;border-radius:6px;',
+        'cursor:pointer;color:#e8edf5;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.16);}',
+        '#' + BW_ID + ' .bw-foot{padding:6px 10px;font-size:9.5px;opacity:.45;border-top:1px solid rgba(255,255,255,.07);flex:none;}',
+        '#' + BW_ID + ' .bw-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:se-resize;touch-action:none;}',
+        '#' + BW_ID + ' .bw-resize::after{content:"";position:absolute;right:4px;bottom:4px;width:8px;height:8px;',
+        'border-right:2px solid rgba(255,255,255,.35);border-bottom:2px solid rgba(255,255,255,.35);border-bottom-right-radius:3px;}',
+      ].join('')
+    }
+
+    function ensureBwStyle() {
+      if (document.getElementById(BW_ID + '-style')) return
+      var style = document.createElement('style')
+      style.id = BW_ID + '-style'
+      style.textContent = bwStyle()
+      document.head.appendChild(style)
+    }
+
+    function loadBwState() {
+      try {
+        var raw = window.localStorage.getItem(BW_STATE_KEY)
+        return raw ? JSON.parse(raw) : null
+      } catch (e) {
+        return null
+      }
+    }
+
+    function saveBwState(rect) {
+      try {
+        window.localStorage.setItem(BW_STATE_KEY, JSON.stringify({
+          x: Math.round(rect.left), y: Math.round(rect.top),
+          w: Math.round(rect.width), h: Math.round(rect.height),
+        }))
+      } catch (e) { /* noop */ }
+    }
+
+    function defaultBwRect() {
+      var vw = window.innerWidth || 1280
+      var vh = window.innerHeight || 800
+      var pet = overlay ? overlay.getBoundingClientRect() : null
+      var w = Math.min(420, Math.max(340, Math.round(vw * 0.32)))
+      var h = Math.min(600, Math.max(420, Math.round(vh * 0.68)))
+      var x = pet ? Math.max(12, Math.round(pet.left - w - 20)) : Math.round(vw - w - 260)
+      var y = pet ? Math.max(12, Math.round(Math.min(pet.top, vh - h - 12))) : 80
+      return { x: x, y: y, w: w, h: h }
+    }
+
+    function clampBwRect(rect) {
+      var vw = window.innerWidth || 1280
+      var vh = window.innerHeight || 800
+      var w = Math.max(320, Math.min(rect.w, vw - 24))
+      var h = Math.max(360, Math.min(rect.h, vh - 24))
+      var x = Math.max(8, Math.min(rect.x, vw - w - 8))
+      var y = Math.max(8, Math.min(rect.y, vh - h - 8))
+      return { x: x, y: y, w: w, h: h }
+    }
+
+    function applyBwRect(rect) {
+      if (!bw) return
+      bw.style.left = rect.x + 'px'
+      bw.style.top = rect.y + 'px'
+      bw.style.width = rect.w + 'px'
+      bw.style.height = rect.h + 'px'
+    }
+
+    function ensureBw() {
+      if (bw) return bw
+      ensureBwStyle()
+      var win = el('div')
+      win.id = BW_ID
+      win.hidden = true
+
+      var head = el('div', 'bw-head')
+      head.appendChild(el('span', 'bw-title', 'Bilibili'))
+      var tabs = el('div', 'bw-tabs')
+      ;[['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
+        var button = el('button', '', pair[1])
+        button.type = 'button'
+        button.setAttribute('data-kind', pair[0])
+        button.addEventListener('click', function (event) {
+          event.stopPropagation()
+          if (biliKind === pair[0] && biliList) return
+          biliKind = pair[0]
+          biliList = null
+          biliMode = 'list'
+          renderBili()
+          void loadBili()
+        })
+        tabs.appendChild(button)
+      })
+      head.appendChild(tabs)
+      var close = el('button', 'bw-close', '×')
+      close.type = 'button'
+      close.addEventListener('click', function (event) {
+        event.stopPropagation()
+        closeBili()
+      })
+      head.appendChild(close)
+
+      var body = el('div', 'bw-body')
+      var foot = el('div', 'bw-foot', '拖动标题栏移动 · 右下角缩放 · Esc 关闭')
+      var grip = el('div', 'bw-resize')
+
+      win.appendChild(head)
+      win.appendChild(body)
+      win.appendChild(foot)
+      win.appendChild(grip)
+      win.addEventListener('pointerdown', function (event) { event.stopPropagation() })
+      win.addEventListener('click', function (event) { event.stopPropagation() })
+
+      /* 拖动 */
+      head.addEventListener('pointerdown', function (event) {
+        if (event.button !== 0) return
+        var rect = win.getBoundingClientRect()
+        bwDrag = { mode: 'move', sx: event.clientX, sy: event.clientY, x: rect.left, y: rect.top, w: rect.width, h: rect.height }
+        win.classList.add('bw-dragging')
+        event.preventDefault()
+      })
+      /* 缩放 */
+      grip.addEventListener('pointerdown', function (event) {
+        if (event.button !== 0) return
+        var rect = win.getBoundingClientRect()
+        bwDrag = { mode: 'resize', sx: event.clientX, sy: event.clientY, x: rect.left, y: rect.top, w: rect.width, h: rect.height }
+        event.preventDefault()
+      })
+      document.addEventListener('pointermove', function (event) {
+        if (!bwDrag) return
+        var dx = event.clientX - bwDrag.sx
+        var dy = event.clientY - bwDrag.sy
+        var next
+        if (bwDrag.mode === 'move') {
+          next = clampBwRect({ x: bwDrag.x + dx, y: bwDrag.y + dy, w: bwDrag.w, h: bwDrag.h })
+        } else {
+          next = clampBwRect({ x: bwDrag.x, y: bwDrag.y, w: bwDrag.w + dx, h: bwDrag.h + dy })
+        }
+        applyBwRect(next)
+      })
+      document.addEventListener('pointerup', function () {
+        if (!bwDrag) return
+        bwDrag = null
+        win.classList.remove('bw-dragging')
+        var rect = win.getBoundingClientRect()
+        saveBwState({ left: rect.left, top: rect.top, width: rect.width, height: rect.height })
+      })
+
+      document.body.appendChild(win)
+      bw = win
+      return win
+    }
+
     function formatDuration(seconds) {
       var total = Number(seconds) || 0
       var m = Math.floor(total / 60)
@@ -593,51 +741,27 @@ window.__ModuleLoader__.load({
 
     function coverUrl(pic) {
       if (!pic) return ''
-      var target = pic.indexOf('//') === 0 ? 'https:' + pic : pic
+      var target = pic.indexOf('//') === 0 ? 'https:' + pic : pic.replace(/^http:\/\//i, 'https://')
       return BASE + '/api/bili-img?u=' + encodeURIComponent(target)
     }
 
-    function biliPanel() {
-      return overlay ? overlay.querySelector('.dpl-bili') : null
-    }
-
     function renderBili() {
-      var panel = biliPanel()
-      if (!panel) return
-      while (panel.firstChild) panel.removeChild(panel.firstChild)
+      if (!bw) return
+      var head = bw.querySelector('.bw-head')
+      var body = bw.querySelector('.bw-body')
+      var foot = bw.querySelector('.bw-foot')
+      if (!head || !body) return
 
-      var head = el('div', 'dpl-bili-head')
-      head.appendChild(el('span', 'dpl-bili-title', 'Bilibili'))
-      var tabs = el('div', 'dpl-bili-tabs')
-      ;[['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
-        var button = el('button', '', pair[1])
-        button.type = 'button'
-        button.setAttribute('data-kind', pair[0])
-        if (biliKind === pair[0]) button.setAttribute('data-active', '1')
-        button.addEventListener('click', function (event) {
-          event.stopPropagation()
-          if (biliKind === pair[0] && biliList) return
-          biliKind = pair[0]
-          biliList = null
-          biliMode = 'list'
-          renderBili()
-          void loadBili()
-        })
-        tabs.appendChild(button)
+      ;[].forEach.call(head.querySelectorAll('.bw-tabs button'), function (button) {
+        if (button.getAttribute('data-kind') === biliKind) button.setAttribute('data-active', '1')
+        else button.removeAttribute('data-active')
       })
-      head.appendChild(tabs)
-      var close = el('button', 'dpl-bili-close', '×')
-      close.type = 'button'
-      close.addEventListener('click', function (event) {
-        event.stopPropagation()
-        closeBili()
-      })
-      head.appendChild(close)
-      panel.appendChild(head)
+
+      while (body.firstChild) body.removeChild(body.firstChild)
 
       if (biliMode === 'player' && biliCurrent) {
-        var play = el('div', 'dpl-bili-play')
-        var back = el('button', 'dpl-bili-back', '← 返回')
+        var play = el('div', 'bw-play')
+        var back = el('button', 'bw-back', '← 返回')
         back.type = 'button'
         back.addEventListener('click', function (event) {
           event.stopPropagation()
@@ -649,26 +773,28 @@ window.__ModuleLoader__.load({
         var frame = document.createElement('iframe')
         frame.allow = 'autoplay; fullscreen; picture-in-picture'
         frame.setAttribute('allowfullscreen', 'true')
-        frame.src =
-          'https://player.bilibili.com/player.html?bvid=' +
-          encodeURIComponent(biliCurrent.bvid) +
-          '&autoplay=1&high_quality=1&danmaku=1'
+        frame.setAttribute('referrerpolicy', 'origin')
+        frame.src = 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(biliCurrent.bvid) +
+          '&autoplay=1&high_quality=1&danmaku=1&page=1'
         play.appendChild(frame)
-        panel.appendChild(play)
-        panel.appendChild(el('div', 'dpl-bili-foot', 'Esc 返回列表 · 点 × 关掉小窗'))
+        body.appendChild(play)
+        body.classList.add('bw-body--play')
+        if (foot) foot.textContent = 'Esc 返回列表'
         return
       }
 
-      var body = el('div', 'dpl-bili-body')
+      body.classList.remove('bw-body--play')
+      if (foot) foot.textContent = '拖动标题栏移动 · 右下角缩放 · Esc 关闭'
+
       if (biliError) {
-        body.appendChild(el('div', 'dpl-bili-note', biliError))
+        body.appendChild(el('div', 'bw-note', biliError))
       } else if (!biliList) {
-        body.appendChild(el('div', 'dpl-bili-note', '正在加载…'))
+        body.appendChild(el('div', 'bw-note', '正在加载…'))
       } else if (!biliList.length) {
-        body.appendChild(el('div', 'dpl-bili-note', '这一档暂时没有拉到视频'))
+        body.appendChild(el('div', 'bw-note', '这一档暂时没有拉到视频'))
       } else {
         biliList.forEach(function (item) {
-          var row = el('div', 'dpl-bili-item')
+          var row = el('div', 'bw-item')
           if (item.pic) {
             var thumb = document.createElement('img')
             thumb.loading = 'lazy'
@@ -676,10 +802,9 @@ window.__ModuleLoader__.load({
             thumb.src = coverUrl(item.pic)
             row.appendChild(thumb)
           }
-          var meta = el('div', 'dpl-bili-meta')
-          meta.appendChild(el('div', 'dpl-bili-name', item.title || item.bvid))
-          var sub = (item.owner || '') + ' · ' + formatViews(item.views) + ' 播放 · ' + formatDuration(item.duration)
-          meta.appendChild(el('div', 'dpl-bili-sub', sub))
+          var meta = el('div', 'bw-meta')
+          meta.appendChild(el('div', 'bw-name', item.title || item.bvid))
+          meta.appendChild(el('div', 'bw-sub', (item.owner || '') + ' · ' + formatViews(item.views) + ' 播放 · ' + formatDuration(item.duration)))
           row.appendChild(meta)
           row.addEventListener('click', function (event) {
             event.stopPropagation()
@@ -690,16 +815,12 @@ window.__ModuleLoader__.load({
           body.appendChild(row)
         })
       }
-      panel.appendChild(body)
-      panel.appendChild(el('div', 'dpl-bili-foot', '点视频直接播放 · 数据来自 B 站公开接口'))
     }
 
     async function loadBili() {
       biliError = ''
       try {
-        var response = await fetch(BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=12', {
-          headers: { Accept: 'application/json' },
-        })
+        var response = await fetch(BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16', { headers: { Accept: 'application/json' } })
         var payload = await response.json()
         if (!payload || payload.ok !== true) {
           biliError = 'B 站接口暂时不可达：' + ((payload && payload.error) || '未知错误')
@@ -715,126 +836,29 @@ window.__ModuleLoader__.load({
       renderBili()
     }
 
-    /** 把 dsh-bili-widget 的悬浮球藏起来：它和桌宠功能重复，但仍是唤起锚点。 */
-    function ensureBiliChrome() {
-      if (document.getElementById('dsh-pet-liang-bili-chrome')) return
-      var style = document.createElement('style')
-      style.id = 'dsh-pet-liang-bili-chrome'
-      style.textContent =
-        '.dy-launch{opacity:0!important;pointer-events:none!important;box-shadow:none!important;}' +
-        /* 浮窗默认位置由插件自己恢复；桌宠只负责把它拖到桌宠旁边 */
-        '.dy-win{transition:left .0s,top .0s;}'
-      document.head.appendChild(style)
-    }
-
-    /**
-     * 首次运行时，把它持久化的窗口布局写成「桌宠左侧」——
-     * 不要用程序化拖拽去挪它的窗口，那会和它自己的拖动/缩放状态打架（表现为窗口忽大忽小）。
-     */
-    function seedBiliLayout() {
-      try {
-        var key = 'bili-widget-v2'
-        var seeded = 'dsh-pet-liang:bili-seeded'
-        if (window.localStorage.getItem(seeded)) return
-        var raw = window.localStorage.getItem(key)
-        var state = raw ? JSON.parse(raw) : {}
-        if (!state || typeof state !== 'object') state = {}
-        var pet = overlay ? overlay.getBoundingClientRect() : null
-        var w = Math.max(360, Math.min(440, state.w || 400))
-        var h = Math.max(440, Math.min(600, state.h || 560))
-        var x = pet ? Math.max(12, Math.round(pet.left - w - 18)) : Math.max(12, (window.innerWidth || 1280) - w - 260)
-        var y = pet ? Math.max(12, Math.round(pet.bottom - h)) : 80
-        state.w = w
-        state.h = h
-        state.x = x
-        state.y = y
-        window.localStorage.setItem(key, JSON.stringify(state))
-        window.localStorage.setItem(seeded, '1')
-      } catch (e) {
-        /* 无痕模式：忽略 */
-      }
-    }
-
-    /** 用它的拖拽条把浮窗拖到桌宠左侧，避免开在屏幕左上角挡视线。 */
-    function placeBiliWin() {
-      var win = document.querySelector('.dy-win')
-      if (!win || !overlay) return false
-      var header = win.querySelector('.dy-header')
-      if (!header) return false
-      var pet = overlay.getBoundingClientRect()
-      var rect = win.getBoundingClientRect()
-      if (!rect.width || !rect.height) return false
-      var targetLeft = Math.max(12, Math.round(pet.left - rect.width - 18))
-      var targetTop = Math.max(12, Math.round(pet.bottom - rect.height))
-      var dx = Math.round(targetLeft - rect.left)
-      var dy = Math.round(targetTop - rect.top)
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return true
-      var startX = Math.round(rect.left + rect.width / 2)
-      var startY = Math.round(rect.top + 14)
-      try {
-        header.dispatchEvent(new PointerEvent('pointerdown', {
-          bubbles: true, cancelable: true, button: 0, buttons: 1,
-          pointerId: 7777, pointerType: 'mouse', clientX: startX, clientY: startY,
-        }))
-        document.dispatchEvent(new PointerEvent('pointermove', {
-          bubbles: true, cancelable: true, buttons: 1,
-          pointerId: 7777, pointerType: 'mouse', clientX: startX + dx, clientY: startY + dy,
-        }))
-        document.dispatchEvent(new PointerEvent('pointerup', {
-          bubbles: true, cancelable: true, button: 0, buttons: 0,
-          pointerId: 7777, pointerType: 'mouse', clientX: startX + dx, clientY: startY + dy,
-        }))
-        return true
-      } catch (e) {
-        return false
-      }
-    }
-
-    /**
-     * 优先唤起独立的 dsh-bili-widget 插件（完整的 B 站浮窗：频道/搜索/历史/迷你/拉伸）。
-     * 它的入口是一个只有 pointerdown/up 的悬浮球，所以这里补发一对指针事件。
-     */
-    function toggleBiliWidget() {
-      var launch = document.querySelector('.dy-launch')
-      if (!launch) return false
-      try {
-        var rect = launch.getBoundingClientRect()
-        var base = {
-          bubbles: true,
-          cancelable: true,
-          clientX: rect.left + rect.width / 2,
-          clientY: rect.top + rect.height / 2,
-          button: 0,
-          pointerId: 4242,
-          pointerType: 'mouse',
-        }
-        ensureBiliChrome()
-        launch.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, base)))
-        document.dispatchEvent(new PointerEvent('pointerup', Object.assign({ buttons: 0 }, base)))
-        return true
-      } catch (e) {
-        return false
-      }
-    }
-
-    function toggleBili() {
-      if (biliOpen) return closeBili()
-      if (!overlay) return
+    function openBili() {
+      ensureBw()
+      var saved = loadBwState()
+      var rect = clampBwRect(saved || defaultBwRect())
+      applyBwRect(rect)
+      bw.hidden = false
       biliOpen = true
       biliMode = 'list'
       biliCurrent = null
-      var panel = biliPanel()
-      panel.hidden = false
       renderBili()
       if (!biliList) void loadBili()
     }
 
     function closeBili() {
-      var panel = biliPanel()
-      if (panel) panel.hidden = true
+      if (bw) bw.hidden = true
       biliOpen = false
       biliMode = 'list'
       biliCurrent = null
+    }
+
+    function toggleBili() {
+      if (biliOpen) closeBili()
+      else openBili()
     }
 
     /* ────────────────────────── 桥：宿主状态 → 浮动层 ────────────────────────── */
@@ -998,7 +1022,7 @@ window.__ModuleLoader__.load({
 
     /* ────────────────────────── 插件装配 ────────────────────────── */
 
-    var inject = ['slots']
+    var inject = ['slots', 'modelDirectories', 'sessions']
 
     function apply(ctx) {
       try {
@@ -1017,19 +1041,7 @@ window.__ModuleLoader__.load({
       }
 
       buildOverlay()
-      ensureBiliChrome()
-      seedBiliLayout()
-      try {
-        if (!window.__dshPetBiliObserver) {
-          var observer = new MutationObserver(function () {
-            if (document.querySelector('.dy-launch')) ensureBiliChrome()
-          })
-          observer.observe(document.body, { childList: true, subtree: true })
-          window.__dshPetBiliObserver = observer
-        }
-      } catch (e) {
-        /* noop */
-      }
+      ensureBw()
       subscribe(function (state) {
         paint(state, true)
       })
