@@ -78,16 +78,13 @@ export function createMoss3D(canvas, opts) {
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 关节（按实测结构）───────────────────────────────────────────
-       arm mesh 里零件的 y 分布（obj 局部坐标，整体 y = 4.3 … 93.4）：
-         横梁/顶座  79.9 … 93.4
-         上臂       60.6 … 79.9
-         前臂       25.0 … 60.6
-         手         4.3  … 25.0
-       因此三个关节轴：J1 = 79.9（肩）、J2 = 60.6（肘）、J3 = 25.0（腕）。
-       机身（Moss_Main/Annexes/Glass）螺栓固定在手上 —— 归到 J3 段，
-       所以腕关节转动时机身与手一起动，不会出现缝隙。
-       三段用「平级枢轴 + 累计角度」表达：上臂 θ1，前臂 θ1+θ2，手+机身 θ1+θ2+θ3。 */
+    /* ── 关节（按参考图逐处核对轴向）─────────────────────────────────
+       参考图里三个红圈对应的轴向并不相同：
+         J1 头顶下方（颈部圆柱的水平缝）：红弧绕水平缝一圈 → 绕【垂直 Y 轴】偏航
+         J2 前臂顶端（前臂圆柱的水平缝）：同样是水平缝 → 绕【垂直 Y 轴】偏航
+         J3 腕部（机身右侧、面向镜头的圆面）：红圈是画面内的整圆 → 绕【朝向镜头的 Z 轴】
+       零件按 y 分布：横梁 79.9~93.4 / 上臂 60.6~79.9 / 前臂 25.0~60.6 / 手 4.3~25.0。
+       层级：obj → p1(J1,Y) → p2(J2,Y) → p3(J3,Z) → 手 + 机身。 */
     {
       const arm = obj.getObjectByName('Moss_arm')
       const J1 = 79.9
@@ -100,8 +97,9 @@ export function createMoss3D(canvas, opts) {
         const uvAttr = geo.attributes.uv
         const total = posAttr.count
         const M = arm.matrix.clone()
+        const parent = arm.parent
 
-        /* 焊接 + 连通块，按块中心 y 分段 */
+        /* 焊接 + 连通块 */
         const weld = new Map()
         const wid = new Int32Array(total)
         for (let i = 0; i < total; i += 1) {
@@ -156,41 +154,43 @@ export function createMoss3D(canvas, opts) {
           return g2
         }
 
-        const parent = arm.parent
+        /* 所有分段先挂到 obj 下，保证 attach 时世界矩阵正确 */
         const makePart = (triStarts) => {
           const m = new THREE.Mesh(buildSub(triStarts), arm.material)
           m.frustumCulled = false
           m.matrixAutoUpdate = false
           m.matrix.copy(arm.matrix)
-          /* 先挂到父节点、算出正确的世界矩阵，attach 才不会把局部矩阵当世界矩阵 */
           parent.add(m)
           m.updateMatrixWorld(true)
           return m
         }
-        const pivotAt = (y) => {
-          /* 关节处的水平中心 */
+        const jointPos = (y) => {
           let sx = 0; let sz = 0; let n = 0
           for (let i = 0; i < total; i += 1) {
             tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
             if (Math.abs(tmp.y - y) < 3) { sx += tmp.x; sz += tmp.z; n += 1 }
           }
-          const p = new THREE.Group()
-          p.position.set(n ? sx / n : 0, y, n ? sz / n : 0)
-          parent.add(p)
-          parent.updateMatrixWorld(true)
-          return p
+          return new THREE.Vector3(n ? sx / n : 0, y, n ? sz / n : 0)
         }
 
-        /* 段 0：横梁（固定） */
-        makePart(buckets[0])
+        const headMesh = makePart(buckets[0])
+        const upperMesh = makePart(buckets[1])
+        const foreMesh = makePart(buckets[2])
+        const handMesh = makePart(buckets[3])
 
-        /* 段 1/2/3：各自挂到独立枢轴 */
-        const p1 = pivotAt(J1)
-        p1.attach(makePart(buckets[1]))
-        const p2 = pivotAt(J2)
-        p2.attach(makePart(buckets[2]))
-        const p3 = pivotAt(J3)
-        p3.attach(makePart(buckets[3]))
+        const P1 = jointPos(J1)
+        const P2 = jointPos(J2)
+        const P3 = jointPos(J3)
+
+        /* 嵌套枢轴：p1 → p2 → p3，起始无旋转，所以位置直接用差值 */
+        const p1 = new THREE.Group(); p1.position.copy(P1); parent.add(p1); parent.updateMatrixWorld(true)
+        p1.attach(upperMesh)
+
+        const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
+        p2.attach(foreMesh)
+
+        const p3 = new THREE.Group(); p3.position.copy(P3).sub(P2); p2.add(p3); p2.updateMatrixWorld(true)
+        p3.attach(handMesh)
         ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
           const part = obj.getObjectByName(nm)
           if (part) p3.attach(part)
@@ -283,15 +283,19 @@ export function createMoss3D(canvas, opts) {
     const speed = working ? 2.6 : 1
     if (armTop) {
       /* 肩关节与肘关节反向配合：手臂抬起时小臂回折，手始终靠近机身 */
-      /* 三关节联动：肩 θ1，肘 θ1+θ2，腕 θ1+θ2+θ3（累计角度） */
+      /* 三个关节：轴向不同、角度不同、周期不同（各自独立的正弦） */
+      const scale = working ? 1.7 : 1
       if (armTop) {
-        const amp = working ? 4.6 : 2.8
-        const th1 = Math.sin(t * 0.62 * speed) * (amp * Math.PI / 180)
-        const th2 = -th1 * 0.55
-        const th3 = -th1 * 0.30
-        armTop.rotation.z = th1
-        if (armMid) armMid.rotation.z = th1 + th2
-        if (armWrist) armWrist.rotation.z = th1 + th2 + th3
+        /* J1 绕垂直轴偏航 */
+        armTop.rotation.y = Math.sin(t * 0.52 * speed) * (3.0 * scale * Math.PI / 180)
+      }
+      if (armMid) {
+        /* J2 绕垂直轴偏航（周期与相位都不同） */
+        armMid.rotation.y = Math.sin(t * 0.83 * speed + 1.2) * (2.4 * scale * Math.PI / 180)
+      }
+      if (armWrist) {
+        /* J3 绕朝向镜头的 Z 轴摆动 */
+        armWrist.rotation.z = Math.sin(t * 0.61 * speed + 2.1) * (1.8 * scale * Math.PI / 180)
       }
     }
     if (lensCore && lensHalo) {
