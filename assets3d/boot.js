@@ -281,34 +281,29 @@ export function createMoss3D(canvas, opts) {
     last = now || 0
     const t = (performance.now() - t0) / 1000
     const speed = working ? 2.6 : 1
-    if (armTop) {
-      /* 肩关节与肘关节反向配合：手臂抬起时小臂回折，手始终靠近机身 */
-      /* 三个关节：轴向不同、角度不同、周期不同（各自独立的正弦） */
-      const scale = working ? 1.7 : 1
-      if (armTop) {
-        /* J1 绕垂直轴偏航 */
-        armTop.rotation.y = Math.sin(t * 0.52 * speed) * (3.0 * scale * Math.PI / 180)
-      }
-      if (armMid) {
-        /* J2 绕垂直轴偏航（周期与相位都不同） */
-        armMid.rotation.y = Math.sin(t * 0.83 * speed + 1.2) * (2.4 * scale * Math.PI / 180)
-      }
-      if (armWrist) {
-        /* J3 绕朝向镜头的 Z 轴摆动 */
-        armWrist.rotation.z = Math.sin(t * 0.61 * speed + 2.1) * (1.8 * scale * Math.PI / 180)
-      }
-    }
-    if (lensCore && lensHalo) {
-      /* 空闲：暗红呼吸；执行：亮起并快速脉冲 */
-      const base = working ? 0.95 : 0.55
-      const k = working ? 0.45 : 0.18
-      const pulse = base + Math.sin(t * (working ? 5.2 : 1.6)) * k
-      lensCore.material.opacity = Math.max(0.15, Math.min(1, pulse))
-      lensCore.material.color.setHex(working ? 0xff2a0c : 0xff5a2c)
-      if (lensLamp) lensLamp.intensity = (working ? 3.4 : 1.4) * (0.85 + 0.15 * Math.sin(t * (working ? 5.2 : 1.6)))
-      lensHalo.material.opacity = Math.max(0.12, Math.min(1, pulse * 0.85))
-      lensHalo.scale.setScalar((lensHalo.userData.base || lensHalo.scale.x) * (1 + (working ? 0.06 : 0.03) * Math.sin(t * (working ? 5.2 : 1.6))))
-    }
+    /* 三个关节：按关键帧走具体角度（单位：度）
+         J1/J2 绕垂直 Y 轴偏航，J3 绕朝向镜头的 Z 轴摆。
+         序列：静止 → 右偏 → 左偏 → 回中 → 静止，每段 1.6s，平滑缓动。 */
+      const POSES = [
+        { a1: 0, a2: 0, a3: 0 },
+        { a1: 9, a2: -5, a3: 6 },
+        { a1: -7, a2: 6, a3: -5 },
+        { a1: 4, a2: -2, a3: 3 },
+        { a1: 0, a2: 0, a3: 0 },
+      ]
+      const SEG = working ? 1.0 : 1.6
+      const amp = working ? 1.25 : 1
+      const total = SEG * (POSES.length - 1)
+      const lt = (t * speed) % total
+      const i = Math.min(POSES.length - 2, Math.floor(lt / SEG))
+      const f = (lt - i * SEG) / SEG
+      const e = f * f * (3 - 2 * f) /* smoothstep */
+      const from = POSES[i]
+      const to = POSES[i + 1]
+      const ang = (k) => ((from[k] + (to[k] - from[k]) * e) * amp) * Math.PI / 180
+      if (armTop) armTop.rotation.y = ang('a1')
+      if (armMid) armMid.rotation.y = ang('a2')
+      if (armWrist) armWrist.rotation.z = ang('a3')
     renderer.render(scene, camera)
   }
 
