@@ -13,7 +13,7 @@
   "files": [
     "lib",
     "client",
-    "assets",
+    "assets", "assets3d",
     "cordis.patch.yml",
     "README.md"
   ],

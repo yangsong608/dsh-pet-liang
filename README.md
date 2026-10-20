@@ -101,3 +101,18 @@ assets/           四档梁神 + MOSS 六态 + 全息基座（webp，合计约 0
 scripts/          pet-test.mjs（无浏览器自测）、preview.mjs（本地预览）
 screenshots/      README 用图
 ```
+
+## MOSS 3D 模式
+
+MOSS 形象不再用预渲染 PNG，而是**在插件里实时渲染你提供的 550W 模型**：
+
+- 模型：`assets3d/moss.fbx`（4 个材质组 Moss_Main / Moss_arm / Moss_Glass / Moss_Annexes）
+- 贴图：4096² 原图压到 512 的 WebP，共 13 张（Base / Normal / Emissive / ORM 打包），合计约 400KB
+- 运行时：`three.module.min.js` + `FBXLoader` + `fflate` + `NURBS*`，全部本地托管，不联网
+- **关节**：`Moss_arm` 是独立 mesh，运行时以它的顶端（肩部关节）建枢轴并 `attach`，空闲绕肩 ±3.2°、执行态 ±5° 且速度 ×2.6——是真正的 3D 旋转，不是换图
+- 渲染 30fps 上限；切到梁神时暂停渲染循环
+- 失败兜底：WebGL / 模型加载失败时自动退回 PNG 立绘（`moss-base.webp` + `moss-forearm.webp`）
+
+调试：`localStorage['dsh-pet-liang:force'] = 'moss'`（或 `'moss-work'`）可强制显示 MOSS，便于在只配了 DeepSeek 的环境里验证。
+
+> ⚠️ 模型与贴图的版权归原权利方（《流浪地球 2》相关美术），仓库里只作为个人主题插件的素材使用；若要公开发布请自行确认授权。

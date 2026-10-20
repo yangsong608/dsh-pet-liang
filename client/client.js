@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '39'
+    var ASSET_V = '43'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -138,7 +138,34 @@ window.__ModuleLoader__.load({
      * 状态决议：执行中永远是 MOSS 工作态；空闲时 DeepSeek 模型给梁神，其它模型给 MOSS。
      * 返回的是「完整可渲染状态」，方便直接 diff。
      */
+    /** 调试：localStorage['dsh-pet-liang:force'] = 'moss' | 'moss-work' 可强制形象 */
+    function forcedState() {
+      try {
+        var v = window.localStorage.getItem('dsh-pet-liang:force')
+        if (!v) return null
+        if (v === 'moss' || v === 'moss-work') {
+          var working = v === 'moss-work'
+          return {
+            character: 'moss',
+            working: working,
+            asset: working ? 'moss-work.webp' : 'moss-base.webp',
+            title: 'MOSS',
+            subtitle: working ? '执行中' : '空闲',
+            aura: '#5ee7ff',
+            glow: working ? 0.8 : 0.4,
+            provider: '',
+            model: '',
+            effort: '',
+            tier: 0,
+          }
+        }
+      } catch (e) { /* noop */ }
+      return null
+    }
+
     function decide(input) {
+      const forced = forcedState()
+      if (forced) return forced
       var selection = (input && input.selection) || readSelection(input && input.modelState)
       var provider = selection ? selection.provider : ''
       /* provider 拿不到时默认按 DeepSeek 处理：DSH 自带的就只有 DeepSeek，
@@ -248,6 +275,8 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + '[data-character="liang"] .body{transform-origin:50% 100%;animation-name:pet-float;}',
       '#' + ROOT_ID + '[data-working="1"] .body{animation-duration:2.4s;}',
       '#' + ROOT_ID + ' .figwrap{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;}',
+      '#' + ROOT_ID + ' .moss3d{position:absolute;left:0;bottom:16px;width:100%;height:100%;z-index:4;display:none;}',
+      '#' + ROOT_ID + ' .moss3d.on{display:block;}',
       '#' + ROOT_ID + ' .forearm{position:absolute;left:0;bottom:16px;width:100%;height:auto;z-index:3;',
       'pointer-events:none;transform-origin:62.89% 35.55%;animation:pet-arm 5.2s ease-in-out infinite;',
       'transition:opacity .3s linear;',
@@ -412,6 +441,31 @@ window.__ModuleLoader__.load({
       })
     }
 
+    var moss3d = null
+    var moss3dBroken = false
+    var moss3dTried = false
+
+    function ensure3d(canvas) {
+      if (moss3d || moss3dBroken || moss3dTried) return
+      moss3dTried = true
+      var boot = BASE + '/3d/boot.js'
+      import(boot).then(function (mod) {
+        moss3d = mod.createMoss3D(canvas, {
+          base: BASE + '/3d/',
+          onError: function () {
+            moss3dBroken = true
+            canvas.classList.remove('ready')
+          },
+        })
+        canvas.classList.add('ready')
+        if (current) paint(current, false)
+      }).catch(function () {
+        /* 加载失败就继续用 PNG 立绘 */
+        moss3dBroken = true
+        canvas.classList.remove('ready')
+      })
+    }
+
     function buildOverlay() {
       ensureStyle()
       var existing = document.getElementById(ROOT_ID)
@@ -434,12 +488,15 @@ window.__ModuleLoader__.load({
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-base.webp')
       figure.setAttribute('data-char', 'moss')
+      var canvas3d = document.createElement('canvas')
+      canvas3d.className = 'moss3d'
       var forearm = el('img', 'forearm')
       forearm.src = assetUrl('moss-forearm.webp')
       forearm.alt = ''
       forearm.draggable = false
       figwrap.appendChild(figure)
       figwrap.appendChild(forearm)
+      figwrap.appendChild(canvas3d)
       body.appendChild(figwrap)
       body.appendChild(core)
       stage.appendChild(aura)
@@ -527,6 +584,20 @@ window.__ModuleLoader__.load({
       if (aura) aura.style.opacity = String(0.3 + state.glow * 0.55)
 
 
+
+      var c3d = overlay.querySelector('.moss3d')
+      if (c3d) {
+        if (state.character === 'moss' && !moss3dBroken) ensure3d(c3d)
+        var use3d = state.character === 'moss' && c3d.classList.contains('ready')
+        c3d.classList.toggle('on', use3d)
+        if (moss3d) {
+          moss3d.setWorking(!!state.working)
+          if (moss3d.setActive) moss3d.setActive(use3d)
+        }
+        if (figure) figure.style.visibility = use3d ? 'hidden' : ''
+        var fa = overlay.querySelector('.forearm')
+        if (fa) fa.style.visibility = use3d ? 'hidden' : ''
+      }
 
       if (!figure) return
       var nextChar = state.character
