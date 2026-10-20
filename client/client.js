@@ -58,10 +58,15 @@ window.__ModuleLoader__.load({
     var EFFORT_RANK = {
       off: 0,
       none: 0,
+      on: 0.2,
+      auto: 0.5,
+      standard: 0.5,
       minimal: 0.15,
       minimal_effort: 0.15,
       low: 0.35,
       medium: 0.55,
+      deep: 0.86,
+      thinking: 0.86,
       high: 0.86,
       xhigh: 1,
       max: 1,
@@ -216,14 +221,11 @@ window.__ModuleLoader__.load({
       'font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;color:var(--dsw-alias-label-primary,#e8edf5);',
       'user-select:none;-webkit-user-select:none;pointer-events:auto;}',
       '#' + ROOT_ID + '{touch-action:none;}',
-      '#' + ROOT_ID + ' .dpl-stage{position:relative;width:196px;height:228px;display:flex;align-items:flex-end;justify-content:center;cursor:grab;}',
+      '#' + ROOT_ID + ' .dpl-stage{position:relative;width:196px;height:196px;display:flex;align-items:flex-end;justify-content:center;cursor:grab;}',
       '#' + ROOT_ID + '.is-dragging .dpl-stage{cursor:grabbing;}',
       '#' + ROOT_ID + '.is-dragging .dpl-figure{animation-play-state:paused;}',
-      '#' + ROOT_ID + ' .dpl-aura{position:absolute;left:50%;bottom:26px;width:190px;height:150px;transform:translateX(-50%);',
+      '#' + ROOT_ID + ' .dpl-aura{position:absolute;left:50%;bottom:34px;width:190px;height:150px;transform:translateX(-50%);',
       'filter:blur(18px);opacity:.55;border-radius:50%;transition:background .6s ease,opacity .6s ease;}',
-      '#' + ROOT_ID + ' .dpl-base{position:absolute;left:50%;bottom:2px;width:186px;transform:translateX(-50%);opacity:.92;pointer-events:none;',
-      '-webkit-mask-image:radial-gradient(ellipse 58% 64% at 50% 62%,#000 42%,rgba(0,0,0,.5) 68%,transparent 84%);',
-      'mask-image:radial-gradient(ellipse 58% 64% at 50% 62%,#000 42%,rgba(0,0,0,.5) 68%,transparent 84%);}',
       '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;mix-blend-mode:screen;',
       'animation:dpl-breathe 4.2s ease-in-out infinite;}',
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
@@ -235,13 +237,10 @@ window.__ModuleLoader__.load({
       'mask-image:radial-gradient(circle at 50% 46%,#000 62%,rgba(0,0,0,.72) 78%,transparent 92%);}',
       '#' + ROOT_ID + '[data-character="liang"] .dpl-figure-wrap{position:relative;}',
       '#' + ROOT_ID + '[data-character="liang"] .dpl-scanlines{opacity:1;}',
-      '#' + ROOT_ID + ' .dpl-scanlines{position:absolute;left:50%;bottom:42px;width:150px;height:150px;border-radius:50%;',
+      '#' + ROOT_ID + ' .dpl-scanlines{position:absolute;left:50%;bottom:12px;width:150px;height:150px;border-radius:50%;',
       'transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity .3s ease;',
       'background:repeating-linear-gradient(to bottom,rgba(120,220,255,.13) 0 1px,transparent 1px 3px);mix-blend-mode:screen;}',
-'#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:10px;width:158px;height:32px;transform:translateX(-50%);',
-      'border-radius:50%;border:1px solid var(--dpl-aura);opacity:.28;pointer-events:none;}',
-      '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.75;animation:dpl-spin 3.4s linear infinite;}',
-      '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:0;width:168px;height:186px;transform:translateX(-50%);',
+      '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:-8px;width:168px;height:186px;transform:translateX(-50%);',
       'overflow:hidden;pointer-events:none;opacity:0;border-radius:50%;}',
       '#' + ROOT_ID + ' .dpl-scan::after{content:"";position:absolute;left:0;width:100%;height:16px;filter:blur(4px);',
       'background:linear-gradient(to bottom,transparent,var(--dpl-aura),transparent);opacity:.42;',
@@ -433,10 +432,6 @@ window.__ModuleLoader__.load({
 
       var stage = el('div', 'dpl-stage')
       var aura = el('div', 'dpl-aura')
-      var base = el('img', 'dpl-base')
-      base.src = assetUrl('holo-pedestal.webp')
-      base.alt = ''
-      base.draggable = false
       var figure = el('img', 'dpl-figure')
       figure.src = assetUrl('moss-idle.webp')
       figure.alt = ''
@@ -445,13 +440,10 @@ window.__ModuleLoader__.load({
       figure.setAttribute('data-char', 'moss')
       var scanlines = el('div', 'dpl-scanlines')
       var scan = el('div', 'dpl-scan')
-      var ring = el('div', 'dpl-ring')
       stage.appendChild(aura)
-      stage.appendChild(base)
       stage.appendChild(figure)
       stage.appendChild(scanlines)
       stage.appendChild(scan)
-      stage.appendChild(ring)
 
       var hud = el('div', 'dpl-hud')
       var dot = el('span', 'dpl-dot')
@@ -476,6 +468,11 @@ window.__ModuleLoader__.load({
         event.stopPropagation()
         if (suppressClick) return
         if (event.target && event.target.closest && event.target.closest('.dpl-bili')) return
+        /* 装了 dsh-bili-widget 就用它那个完整浮窗；没装才用内置的简单列表 */
+        if (toggleBiliWidget()) {
+          if (biliOpen) closeBili()
+          return
+        }
         void toggleBili()
       })
       document.addEventListener('click', function () {
@@ -530,7 +527,8 @@ window.__ModuleLoader__.load({
       if (stateNode) stateNode.textContent = state.subtitle
       if (modelNode) {
         var tag = state.model || state.provider || ''
-        modelNode.textContent = tag ? tag.replace(/^deepseek[-_]?/i, '') : '模型未知'
+        if (tag) tag = tag.replace(/^deepseek[-_]?/i, '') + (state.effort ? ' · ' + state.effort : '')
+        modelNode.textContent = tag || '模型未知'
         modelNode.setAttribute('data-unknown', tag ? '0' : '1')
       }
       if (aura) aura.style.background = 'radial-gradient(circle,' + state.aura + ' 0%, transparent 68%)'
@@ -716,6 +714,32 @@ window.__ModuleLoader__.load({
       renderBili()
     }
 
+    /**
+     * 优先唤起独立的 dsh-bili-widget 插件（完整的 B 站浮窗：频道/搜索/历史/迷你/拉伸）。
+     * 它的入口是一个只有 pointerdown/up 的悬浮球，所以这里补发一对指针事件。
+     */
+    function toggleBiliWidget() {
+      var launch = document.querySelector('.dy-launch')
+      if (!launch) return false
+      try {
+        var rect = launch.getBoundingClientRect()
+        var base = {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+          button: 0,
+          pointerId: 4242,
+          pointerType: 'mouse',
+        }
+        launch.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, base)))
+        document.dispatchEvent(new PointerEvent('pointerup', Object.assign({ buttons: 0 }, base)))
+        return true
+      } catch (e) {
+        return false
+      }
+    }
+
     function toggleBili() {
       if (biliOpen) return closeBili()
       if (!overlay) return
@@ -847,6 +871,21 @@ window.__ModuleLoader__.load({
 
       /* 目录只用来补「档位序列」，拿不到也不影响判定 */
       var modelState = useModelState(ctx, sessionId)
+
+      /* 投影里有时只带 provider/model，档位要另找：目录的 current.reasoningEffort 或档位序列 */
+      var fromDirectory = readSelection(modelState)
+      if (selection && fromDirectory) {
+        selection = {
+          provider: selection.provider || fromDirectory.provider,
+          model: selection.model || fromDirectory.model,
+          effort: selection.effort || fromDirectory.effort,
+          efforts: selection.efforts.length ? selection.efforts : fromDirectory.efforts,
+          defaultEffort: selection.defaultEffort || fromDirectory.defaultEffort,
+          modelLabel: selection.modelLabel || fromDirectory.modelLabel,
+        }
+      } else if (!selection && fromDirectory) {
+        selection = fromDirectory
+      }
 
       var decision = useMemo(function () {
         return decide({ sessionId: sessionId, running: running, selection: selection, modelState: modelState })

@@ -56,8 +56,8 @@ check('宿主半注册了健康检查', routes.has('/dsh-pet-liang/api/health'))
 check('宿主半注册了 B 站列表代理', routes.has('/dsh-pet-liang/api/bili'))
 check('宿主半注册了 B 站图片代理', routes.has('/dsh-pet-liang/api/bili-img'))
 check(
-  '宿主半注册了立绘与基座资源',
-  routes.has('/dsh-pet-liang/assets/liang-1.webp') && routes.has('/dsh-pet-liang/assets/holo-pedestal.webp'),
+  '宿主半注册了立绘与 MOSS 资源',
+  routes.has('/dsh-pet-liang/assets/liang-1.webp') && routes.has('/dsh-pet-liang/assets/moss-work.webp'),
   routes.size + ' 条路由',
 )
 
@@ -210,6 +210,15 @@ check('投影缺档位：medium → tier3', internals.preview.tierOf({
 }) === 3)
 check('未知档位名落中间档', internals.preview.tierOf({
   provider: 'deepseek-official', model: 'm', effort: 'weird', efforts: [], defaultEffort: '',
+}) === 2)
+check('开关式档位 on → tier2', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'on', efforts: [], defaultEffort: '',
+}) === 2)
+check('xhigh → tier4', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'xhigh', efforts: [], defaultEffort: '',
+}) === 4)
+check('low → tier2', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'low', efforts: [], defaultEffort: '',
 }) === 2)
 
 /* 用假 hooks 把真实的 Bridge 跑一遍：模拟「会话投影里就是 DeepSeek + high」 */
