@@ -292,22 +292,45 @@ export function createMoss3D(canvas, opts) {
        空闲：小幅、慢、像在看人或思考
        执行：大幅、快、带停顿的机械感，多个动作段轮流执行 */
     const IDLE = [
-      { name: '环视', dur: 5.6, keys: [
-        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
-        { t: 2.4, a1: 5.5, a2: -2, a3: 1.6, eye: 0.48 },
-        { t: 4.4, a1: -4.5, a2: 2, a3: -1.2, eye: 0.44 },
-        { t: 5.6, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+      /* 1 缓慢环视：先看右、停一会、再看左、回正 */
+      { name: '缓慢环视', dur: 30, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+        { t: 7, a1: 6, a2: -2.5, a3: 1.6, eye: 0.52 },
+        { t: 13, a1: 6, a2: -2.5, a3: 1.6, eye: 0.46 },
+        { t: 19, a1: -5, a2: 2, a3: -1.4, eye: 0.50 },
+        { t: 25, a1: -5, a2: 2, a3: -1.4, eye: 0.44 },
+        { t: 30, a1: 0, a2: 0, a3: 0, eye: 0.40 },
       ] },
-      { name: '思考', dur: 4.2, keys: [
-        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.38 },
-        { t: 1.1, a1: 1.5, a2: -1, a3: -2.6, eye: 0.72 },
-        { t: 2.8, a1: 2.2, a2: -1.2, a3: -2.2, eye: 0.44 },
-        { t: 4.2, a1: 0, a2: 0, a3: 0, eye: 0.38 },
+      /* 2 轻微侧望：偏向一侧并停留，像在留意什么 */
+      { name: '轻微侧望', dur: 30, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.42 },
+        { t: 9, a1: -4.5, a2: 1.8, a3: -2.2, eye: 0.48 },
+        { t: 21, a1: -4.5, a2: 1.8, a3: -2.4, eye: 0.44 },
+        { t: 30, a1: 0, a2: 0, a3: 0, eye: 0.42 },
       ] },
-      { name: '微调', dur: 3.4, keys: [
-        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
-        { t: 1.5, a1: -3.0, a2: 1.2, a3: 1.0, eye: 0.52 },
-        { t: 3.4, a1: 0, a2: 0, a3: 0, eye: 0.42 },
+      /* 3 沉思：低头、长停、眼缓慢亮起再落 */
+      { name: '沉思', dur: 30, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+        { t: 6, a1: 1.5, a2: -0.8, a3: -3.2, eye: 0.72 },
+        { t: 16, a1: 1.8, a2: -1, a3: -3.0, eye: 0.58 },
+        { t: 23, a1: 1.2, a2: -0.6, a3: -2.4, eye: 0.66 },
+        { t: 30, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+      ] },
+      /* 4 巡视：左右各看一次，中间各停一段 */
+      { name: '巡视', dur: 30, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.42 },
+        { t: 6, a1: 5.5, a2: -2.2, a3: 1.2, eye: 0.55 },
+        { t: 11, a1: 5.5, a2: -2.2, a3: 1.2, eye: 0.45 },
+        { t: 17, a1: -5.5, a2: 2.2, a3: -1.2, eye: 0.55 },
+        { t: 22, a1: -5.5, a2: 2.2, a3: -1.2, eye: 0.45 },
+        { t: 30, a1: 0, a2: 0, a3: 0, eye: 0.42 },
+      ] },
+      /* 5 静止休整：几乎不动，只有极小的姿态漂移 */
+      { name: '静止休整', dur: 30, keys: [
+        { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.38 },
+        { t: 10, a1: 1.2, a2: -0.5, a3: 0.8, eye: 0.44 },
+        { t: 20, a1: 0.6, a2: -0.2, a3: -0.6, eye: 0.40 },
+        { t: 30, a1: 0, a2: 0, a3: 0, eye: 0.38 },
       ] },
     ]
 
@@ -441,9 +464,14 @@ export function createMoss3D(canvas, opts) {
       : f * f * (3 - 2 * f)
     const mix = (key) => (k0[key] + (k1[key] - k0[key]) * ease)
     const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
-    const A1 = frozen ? 0 : (mix('a1') * motionAmp * Math.PI) / 180
-    const A2 = frozen ? 0 : (mix('a2') * motionAmp * Math.PI) / 180
-    const A3 = frozen ? 0 : (mix('a3') * motionAmp * Math.PI) / 180
+    /* 空闲态叠加极缓慢的微动（周期 60~110s），避免长时间保持一个姿态像卡住 */
+    const micro = working ? 0 : 1
+    const m1 = Math.sin((t / 87) * Math.PI * 2) * 0.55 * micro
+    const m2 = Math.sin((t / 103) * Math.PI * 2 + 1.1) * 0.35 * micro
+    const m3 = Math.sin((t / 71) * Math.PI * 2 + 2.3) * 0.45 * micro
+    const A1 = frozen ? 0 : ((mix('a1') + m1) * motionAmp * Math.PI) / 180
+    const A2 = frozen ? 0 : ((mix('a2') + m2) * motionAmp * Math.PI) / 180
+    const A3 = frozen ? 0 : ((mix('a3') + m3) * motionAmp * Math.PI) / 180
     if (armTop) armTop.rotation.set(0, A1, 0)
     if (armMid) armMid.rotation.set(0, A2, 0)
     if (armWrist) armWrist.rotation.set(A3, 0, 0)
