@@ -49,6 +49,7 @@ export function createMoss3D(canvas, opts) {
   /* 鼠标拖动瞄准：nx/ny ∈ [-1,1]，null 表示释放 */
   let aimTarget = null
   const aimCur = { yaw: 0, pitch: 0 }
+  let aimBlend = 0   /* 0 = 完全脚本姿态，1 = 完全跟随鼠标 */
   let armTop = null
   let armMid = null
   let armWrist = null
@@ -476,25 +477,23 @@ export function createMoss3D(canvas, opts) {
     let deg2 = mix('a2') + m2
     let deg3 = mix('a3') + m3
 
-    /* 拖动瞄准：把目标方向分配给三个关节（颈部 60% / 中臂 40% 偏航，腕部俯仰） */
+    /* 拖动瞄准：脚本姿态与鼠标姿态按权重混合，进入/退出都不跳变。
+       目标方向分配给三个关节：颈部 60% + 中臂 40% 偏航，腕部俯仰。 */
+    aimBlend += ((aimTarget ? 1 : 0) - aimBlend) * 0.16
     if (aimTarget) {
-      const lerp = 0.18
-      aimCur.yaw += (aimTarget.yaw - aimCur.yaw) * lerp
-      aimCur.pitch += (aimTarget.pitch - aimCur.pitch) * lerp
-      deg1 = aimCur.yaw * 0.6
-      deg2 = aimCur.yaw * 0.4
-      deg3 = aimCur.pitch
-    } else if (aimCur.yaw !== 0 || aimCur.pitch !== 0) {
-      /* 松手后平滑回到脚本姿态 */
-      aimCur.yaw += (0 - aimCur.yaw) * 0.08
-      aimCur.pitch += (0 - aimCur.pitch) * 0.08
-      if (Math.abs(aimCur.yaw) < 0.02) aimCur.yaw = 0
-      if (Math.abs(aimCur.pitch) < 0.02) aimCur.pitch = 0
-      if (aimCur.yaw !== 0 || aimCur.pitch !== 0) {
-        deg1 = aimCur.yaw * 0.6
-        deg2 = aimCur.yaw * 0.4
-        deg3 = aimCur.pitch
-      }
+      aimCur.yaw += (aimTarget.yaw - aimCur.yaw) * 0.22
+      aimCur.pitch += (aimTarget.pitch - aimCur.pitch) * 0.22
+    } else if (aimBlend < 0.01) {
+      /* 完全交还给脚本时把鼠标姿态清零，避免下次拖动从旧角度起跳 */
+      aimCur.yaw = 0
+      aimCur.pitch = 0
+      aimBlend = 0
+    }
+    if (aimBlend > 0.001) {
+      const w = aimBlend
+      deg1 = deg1 * (1 - w) + (aimCur.yaw * 0.6) * w
+      deg2 = deg2 * (1 - w) + (aimCur.yaw * 0.4) * w
+      deg3 = deg3 * (1 - w) + aimCur.pitch * w
     }
 
     const A1 = frozen ? 0 : (deg1 * motionAmp * Math.PI) / 180
