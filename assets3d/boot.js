@@ -101,7 +101,7 @@ export function createMoss3D(canvas, opts) {
        J3 手腕：水平轴 → 前后点头，只带机身
        分段按网格零件 y 分布：>79.9 固定 / 60.6~79.9 上臂 / 25~60.6 前臂+手块 / <25 手块余部
        枢轴用拟合圆圆心，不用截面质心。 */
-    {
+    if (!(typeof window !== 'undefined' && window.__noSplit__)) {
       const arm = obj.getObjectByName('Moss_arm')
       if (arm) {
         const geo = arm.geometry
@@ -175,13 +175,13 @@ export function createMoss3D(canvas, opts) {
         const upperMesh = makePart(buckets[1])
         const foreMesh = makePart(buckets[2])
         const handMesh = makePart(buckets[3])
-        const P1 = new THREE.Vector3(-0.37, 79.9, 18.04)
-        const P2 = new THREE.Vector3(32.92, 60.6, 18.04)
+        const P1 = new THREE.Vector3(-0.40, 79.90, 18.00)
+        const P2 = new THREE.Vector3(32.90, 60.60, 18.00)
         const hb = new THREE.Box3().setFromObject(handMesh)
         const bodyMesh0 = obj.getObjectByName('Moss_Main')
         const bb0 = bodyMesh0 ? new THREE.Box3().setFromObject(bodyMesh0) : hb
-        const hc = hb.getCenter(new THREE.Vector3())
-        const P3 = new THREE.Vector3((hb.min.x + bb0.max.x) / 2, hc.y, hc.z)
+        /* J3 轴心：机身↔手块接合处的垂直圆柱（拟合 r=8.16 残差 16.2%） */
+        const P3 = new THREE.Vector3(19.0, -5.0, 15.1)
         const p1 = new THREE.Group(); p1.position.copy(P1); parent.add(p1); parent.updateMatrixWorld(true)
         p1.attach(upperMesh)
         const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
@@ -285,9 +285,9 @@ export function createMoss3D(canvas, opts) {
     {
       const POSES = [
         { a1: 0, a2: 0, a3: 0 },
-        { a1: 20, a2: -10, a3: 10 },
-        { a1: -18, a2: 9, a3: -9 },
-        { a1: 9, a2: -4, a3: 5 },
+        { a1: 12, a2: -6, a3: 5 },
+        { a1: -11, a2: 5, a3: -5 },
+        { a1: 5, a2: -3, a3: 2.5 },
         { a1: 0, a2: 0, a3: 0 },
       ]
       const SEG = working ? 1.1 : 1.7
@@ -300,9 +300,11 @@ export function createMoss3D(canvas, opts) {
       const from = POSES[idx]
       const to = POSES[idx + 1]
       const ang = (k) => ((from[k] + (to[k] - from[k]) * ease) * amp) * Math.PI / 180
-      if (armTop) armTop.rotation.y = ang('a1')
-      if (armMid) armMid.rotation.y = ang('a2')
-      if (armWrist) armWrist.rotation.x = ang('a3')
+      const frozen = typeof window !== 'undefined' && window.__freeze__
+      /* 三根轴均由圆柱拟合确定，全部是垂直轴 */
+      if (armTop) armTop.rotation.set(0, frozen ? 0 : ang('a1'), 0)
+      if (armMid) armMid.rotation.set(0, frozen ? 0 : ang('a2'), 0)
+      if (armWrist) armWrist.rotation.set(0, frozen ? 0 : ang('a3'), 0)
     }
     if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 0.8
     renderer.render(scene, camera)
