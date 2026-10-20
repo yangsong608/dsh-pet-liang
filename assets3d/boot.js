@@ -57,6 +57,7 @@ export function createMoss3D(canvas, opts) {
   let healthChecked = false
   let baseY = 0
   const jointsDisabled = !!(opts && opts.joints === false)
+  const motionAmp = (opts && typeof opts.motionAmp === 'number') ? opts.motionAmp : 1
   let last = 0
 
   function resize() {
@@ -374,9 +375,9 @@ export function createMoss3D(canvas, opts) {
       : f * f * (3 - 2 * f)
     const mix = (key) => (k0[key] + (k1[key] - k0[key]) * ease)
     const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
-    const A1 = frozen ? 0 : (mix('a1') * Math.PI) / 180
-    const A2 = frozen ? 0 : (mix('a2') * Math.PI) / 180
-    const A3 = frozen ? 0 : (mix('a3') * Math.PI) / 180
+    const A1 = frozen ? 0 : (mix('a1') * motionAmp * Math.PI) / 180
+    const A2 = frozen ? 0 : (mix('a2') * motionAmp * Math.PI) / 180
+    const A3 = frozen ? 0 : (mix('a3') * motionAmp * Math.PI) / 180
     if (armTop) armTop.rotation.set(0, A1, 0)
     if (armMid) armMid.rotation.set(0, A2, 0)
     if (armWrist) armWrist.rotation.set(A3, 0, 0)
