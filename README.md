@@ -167,7 +167,7 @@ MOSS 形象不再用预渲染 PNG，而是**在插件里实时渲染你提供的
   - 实现：`assets3d/boot.js` 的 `aim(yawDeg, pitchDeg)`；`client/client.js` 的 `bindAim()`
   - 截图：`screenshots/25-right-drag-aim.png`、`screenshots/27-orbit-360.png`
 
-- **取景**：相机距离按 `max(模型高度, 2 × 绕颈部轴扫掠半径) × 1.1` 计算，保证 J1/J2 转到任意角度都不被裁切；pet 舞台 240×286。
+- **取景**：先算模型的「绕颈部轴扫掠最大水平半径 maxH」与「最大竖向半高 maxV」，再分别求水平/垂直所需距离取大者（`distH = maxH/tan(halfH)`、`distV = maxV/tan(halfV)`，×1.06 余量）。这样 360° 全程都不会被裁切，也不会像包围球那样把模型缩得过小。pet 舞台 280×330。
 - **相机**：必须用 3/4 视角（方位角 26°）。正对时绕垂直轴的偏航是「往屏幕里外摆」，肉眼几乎看不出；3/4 下才明显。
 - **缓存**：`boot.js` 的请求带 `?v=`，宿主对 `.js` 返回 `no-cache`——之前没带版本，桌面端可能一直执行旧缓存。
 

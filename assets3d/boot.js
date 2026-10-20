@@ -278,8 +278,10 @@ export function createMoss3D(canvas, opts) {
       focusX = mb.getCenter(new THREE.Vector3()).x
     }
     const fovRad = (camera.fov * Math.PI) / 180
-    /* 360° 偏航时模型扫过的最大半径：绕颈部轴（P1）的水平距离 */
-    let swept = 0
+    /* 取景：按「绕颈部轴旋转一周扫出的包围球」算，水平/垂直两个方向都要装得下。
+       之前的做法只按垂直范围算，竖长画布(宽高比<1)时横向会被裁掉。 */
+    let maxH = 0
+    let maxV = 0
     {
       const axisX = -0.40
       const axisZ = 18.00
@@ -289,16 +291,25 @@ export function createMoss3D(canvas, opts) {
         const posAttr = n.geometry && n.geometry.attributes && n.geometry.attributes.position
         if (!posAttr) return
         n.updateMatrixWorld(true)
-        const step = Math.max(1, Math.floor(posAttr.count / 400))
+        const step = Math.max(1, Math.floor(posAttr.count / 600))
         for (let i = 0; i < posAttr.count; i += step) {
           pv.fromBufferAttribute(posAttr, i).applyMatrix4(n.matrixWorld)
-          const r = Math.hypot(pv.x - axisX, pv.z - axisZ)
-          if (r > swept) swept = r
+          /* 相对旋转轴的水平距离 + 竖向高度，取最远点 */
+          const h = Math.hypot(pv.x - axisX, pv.z - axisZ)
+          const v = Math.abs(pv.y)
+          if (h > maxH) maxH = h        /* 旋转扫出的最大水平半径 */
+          if (v > maxV) maxV = v        /* 最大竖向半高 */
         }
       })
     }
-    const span = Math.max(size.y, swept * 2) * 1.1
-    const dist = (span / 2) / Math.tan(fovRad / 2)
+    const el = canvas
+    const aspect = Math.max(0.2, (el.clientWidth || 1) / (el.clientHeight || 1))
+    const halfV = fovRad / 2
+    const halfH = Math.atan(Math.tan(halfV) * aspect)
+    /* 水平要装下 2×maxH，垂直要装下 2×maxV；两边各自算距离取大者 */
+    const distH = Math.max(1, maxH) / Math.tan(halfH)
+    const distV = Math.max(1, maxV) / Math.tan(halfV)
+    const dist = Math.max(distH, distV) * 1.06
     /* 3/4 视角：正对时绕垂直轴的偏航会变成「往屏幕里外摆」，看不出来 */
     const AZ = 26 * Math.PI / 180
     camera.position.set(focusX + Math.sin(AZ) * dist, size.y * 0.06, Math.cos(AZ) * dist)

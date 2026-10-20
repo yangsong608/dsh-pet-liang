@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '81'
+    var ASSET_V = '84'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -246,16 +246,16 @@ window.__ModuleLoader__.load({
     /* ────────────────────────── 样式 ────────────────────────── */
 
     var CSS = [
-      '#' + ROOT_ID + '{position:fixed;right:22px;bottom:104px;width:240px;z-index:2147483000;',
+      '#' + ROOT_ID + '{position:fixed;right:22px;bottom:104px;width:280px;z-index:2147483000;',
       'font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;color:#e8edf5;',
       'user-select:none;-webkit-user-select:none;pointer-events:auto;touch-action:none;}',
       'body:not([data-ds-dark-theme]) #' + ROOT_ID + '{color:#1b2430;}',
 
-      '#' + ROOT_ID + ' .stage{position:relative;width:240px;height:268px;cursor:grab;',
+      '#' + ROOT_ID + ' .stage{position:relative;width:280px;height:330px;cursor:grab;',
       'display:flex;align-items:flex-end;justify-content:center;}',
       '#' + ROOT_ID + '.is-dragging .stage{cursor:grabbing;}',
 
-      '#' + ROOT_ID + ' .aura{position:absolute;left:50%;bottom:22px;width:250px;height:200px;z-index:0;',
+      '#' + ROOT_ID + ' .aura{position:absolute;left:50%;bottom:24px;width:290px;height:236px;z-index:0;',
       'transform:translateX(-50%);border-radius:50%;filter:blur(22px);opacity:.18;',
       'background:radial-gradient(circle at 50% 50%,var(--dpl-aura) 0%,transparent 68%);',
       'animation:pet-breathe 4.6s ease-in-out infinite;}',
@@ -283,7 +283,7 @@ window.__ModuleLoader__.load({
       'mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);}',
       '#' + ROOT_ID + '[data-working="1"] .forearm{opacity:0;animation:none;}',
       '#' + ROOT_ID + '[data-character="liang"] .forearm{display:none;}',
-      '#' + ROOT_ID + ' .figure{position:relative;z-index:2;max-height:256px;max-width:206px;width:auto;',
+      '#' + ROOT_ID + ' .figure{position:relative;z-index:2;max-height:300px;max-width:240px;width:auto;',
       'margin-bottom:16px;filter:drop-shadow(0 10px 20px rgba(0,0,0,.30));',
       '-webkit-mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);',
       'mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);}',
