@@ -284,11 +284,12 @@ export function createMoss3D(canvas, opts) {
     /* 三个关节：按关键帧走具体角度（单位：度）
          J1/J2 绕垂直 Y 轴偏航，J3 绕朝向镜头的 Z 轴摆。
          序列：静止 → 右偏 → 左偏 → 回中 → 静止，每段 1.6s，平滑缓动。 */
+      /* 三个关节都绕垂直 Y 轴（与分段处的水平切口垂直，转动不撕开） */
       const POSES = [
         { a1: 0, a2: 0, a3: 0 },
-        { a1: 9, a2: -5, a3: 6 },
-        { a1: -7, a2: 6, a3: -5 },
-        { a1: 4, a2: -2, a3: 3 },
+        { a1: 15, a2: -8, a3: 6 },
+        { a1: -13, a2: 8, a3: -6 },
+        { a1: 6, a2: -3, a3: 2.5 },
         { a1: 0, a2: 0, a3: 0 },
       ]
       const SEG = working ? 1.0 : 1.6
@@ -303,7 +304,7 @@ export function createMoss3D(canvas, opts) {
       const ang = (k) => ((from[k] + (to[k] - from[k]) * e) * amp) * Math.PI / 180
       if (armTop) armTop.rotation.y = ang('a1')
       if (armMid) armMid.rotation.y = ang('a2')
-      if (armWrist) armWrist.rotation.z = ang('a3')
+      if (armWrist) armWrist.rotation.y = ang('a3')
     renderer.render(scene, camera)
   }
 
