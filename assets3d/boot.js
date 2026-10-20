@@ -38,6 +38,7 @@ export function createMoss3D(canvas, opts) {
   let raf = 0
   let t0 = performance.now()
   let active = true
+  let healthChecked = false
   let last = 0
 
   function resize() {
@@ -185,6 +186,15 @@ export function createMoss3D(canvas, opts) {
         })
 
         arm.visible = false
+        if (typeof console !== 'undefined') {
+          obj.updateMatrixWorld(true)
+          const bb = new THREE.Box3().setFromObject(obj)
+          let vis = 0
+          obj.traverse((n) => { if (n.isMesh && n.visible) vis += 1 })
+          window.__diag__ = 'meshes=' + vis + ' bbox y ' + bb.min.y.toFixed(1) + '..' + bb.max.y.toFixed(1) +
+            ' x ' + bb.min.x.toFixed(1) + '..' + bb.max.x.toFixed(1) +
+            ' cam ' + camera.position.x.toFixed(1) + ',' + camera.position.y.toFixed(1) + ',' + camera.position.z.toFixed(1)
+        }
         armTop = p1
         armMid = p2
         armWrist = p3
@@ -296,6 +306,15 @@ export function createMoss3D(canvas, opts) {
       if (armMid) armMid.rotation.y = ang('a2')
       if (armWrist) armWrist.rotation.y = ang('a3')
     renderer.render(scene, camera)
+    if (!healthChecked) {
+      healthChecked = true
+      window.setTimeout(() => {
+        if (disposed) return
+        if (renderer.info.render.calls === 0) {
+          onError(new Error('3D 渲染无输出（calls=0）'))
+        }
+      }, 1200)
+    }
   }
 
   return {

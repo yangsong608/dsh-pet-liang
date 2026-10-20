@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '59'
+    var ASSET_V = '61'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -278,8 +278,7 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .moss3d{position:absolute;left:0;bottom:16px;width:100%;height:100%;z-index:4;display:none;}',
       '#' + ROOT_ID + ' .moss3d.on{display:block;}',
       '#' + ROOT_ID + ' .forearm{position:absolute;left:0;bottom:16px;width:100%;height:auto;z-index:3;',
-      'pointer-events:none;transform-origin:62.89% 35.55%;animation:pet-arm 5.2s ease-in-out infinite;',
-      'transition:opacity .3s linear;',
+      'pointer-events:none;display:none; /* PNG 兜底不做关节动效：切图旋转会导致机身与手臂分离 */',
       '-webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);',
       'mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);}',
       '#' + ROOT_ID + '[data-working="1"] .forearm{opacity:0;animation:none;}',
@@ -446,6 +445,22 @@ window.__ModuleLoader__.load({
     var moss3dBroken = false
     var moss3dTried = false
 
+    var moss3dFailed = null
+
+    /** 3D 不可用时在 HUD 上显示原因，便于排查（不静默降级） */
+    function mark3dFailed(err) {
+      moss3dFailed = String((err && err.message) || err || 'unknown').slice(0, 40)
+      try { console.error('[dsh-pet-liang] 3D 不可用：', err) } catch (e) { /* noop */ }
+      if (overlay) {
+        var node = overlay.querySelector('.model')
+        if (node) {
+          node.textContent = '3D失败'
+          node.setAttribute('data-unknown', '1')
+          node.title = moss3dFailed
+        }
+      }
+    }
+
     function ensure3d(canvas) {
       if (moss3d || moss3dBroken || moss3dTried) return
       moss3dTried = true
@@ -454,17 +469,18 @@ window.__ModuleLoader__.load({
         moss3d = mod.createMoss3D(canvas, {
           base: BASE + '/3d/',
           ver: ASSET_V,
-          onError: function () {
+          onError: function (err) {
             moss3dBroken = true
             canvas.classList.remove('ready')
+            mark3dFailed(err)
           },
         })
         canvas.classList.add('ready')
         if (current) paint(current, false)
-      }).catch(function () {
-        /* 加载失败就继续用 PNG 立绘 */
+      }).catch(function (err) {
         moss3dBroken = true
         canvas.classList.remove('ready')
+        mark3dFailed(err)
       })
     }
 
