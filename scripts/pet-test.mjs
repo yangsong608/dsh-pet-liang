@@ -181,13 +181,14 @@ const working = internals.decide({ sessionId: 's1', running: true, modelState: m
 check('DeepSeek 执行中 → MOSS 工作态', working.character === 'moss' && working.asset === 'moss-work.webp' && working.working === true)
 
 const otherModelIdle = internals.decide({ sessionId: 's1', running: false, modelState: modelState('openai', 'gpt-x', '', []) })
-check('非 DeepSeek 空闲 → MOSS 空闲', otherModelIdle.character === 'moss' && otherModelIdle.asset === 'moss-idle.webp' && otherModelIdle.working === false)
+check('明确非 DeepSeek 空闲 → MOSS 空闲', otherModelIdle.character === 'moss' && otherModelIdle.asset === 'moss-idle.webp' && otherModelIdle.working === false)
 
 const otherModelWorking = internals.decide({ sessionId: 's1', running: true, modelState: modelState('openai', 'gpt-x', '', []) })
 check('非 DeepSeek 执行中 → MOSS 工作态', otherModelWorking.character === 'moss' && otherModelWorking.working === true)
 
 const noSession = internals.decide({ sessionId: '', running: false, modelState: null })
-check('没有会话时给 MOSS 空闲兜底', noSession.character === 'moss' && noSession.asset === 'moss-idle.webp')
+/* 读不到 provider 时默认按 DeepSeek 处理，所以这里是梁神（中间档） */
+check('没有会话/模型未知 → 默认梁神中间档', noSession.character === 'liang' && noSession.tier === 2, noSession.title + ' / ' + noSession.asset)
 
 check('单个推理档位落到中间档', internals.tierForSelection({ efforts: [{ id: 'only' }], effort: 'only' }) === 2)
 
@@ -240,6 +241,8 @@ function runBridge({ projection, summaryRunning = false, status }) {
     __ModuleLoader__: { load: (spec) => { mod = spec.factory(() => fake) } },
     setTimeout: () => 0,
     clearTimeout: () => {},
+    setInterval: () => 0,
+    clearInterval: () => {},
     localStorage: { getItem: () => null, setItem: () => {} },
   }
   /* eslint-disable-next-line no-new-func */
@@ -285,7 +288,7 @@ const summaryOnly = runBridge({
   summaryRunning: false,
   status: new Map(),
 })
-check('Bridge：没有投影时不报错（回退 MOSS 空闲）', summaryOnly.character === 'moss')
+check('Bridge：没有投影时默认梁神，而不是 MOSS', summaryOnly.character === 'liang')
 
 console.log('\n' + passed + '/' + (passed + failed) + ' 通过')
 if (failed > 0) process.exitCode = 1

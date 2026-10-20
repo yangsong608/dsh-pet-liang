@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '6'
+    var ASSET_V = '8'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -141,7 +141,9 @@ window.__ModuleLoader__.load({
     function decide(input) {
       var selection = (input && input.selection) || readSelection(input && input.modelState)
       var provider = selection ? selection.provider : ''
-      var isDeepSeek = /deepseek/i.test(provider)
+      /* provider 拿不到时默认按 DeepSeek 处理：DSH 自带的就只有 DeepSeek，
+         读不到就显示 MOSS 会让「用了 DeepSeek 却没梁神」变成常态。 */
+      var isDeepSeek = provider ? /deepseek/i.test(provider) : true
       var running = !!(input && input.running)
       var tier = tierOf(selection)
       var meta = LIANG_TIERS[tier - 1]
@@ -231,6 +233,13 @@ window.__ModuleLoader__.load({
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
             /* 梁神：透明底立绘，直接浮着（不画圆框、不加背景） */
       '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:auto;max-width:176px;max-height:176px;}',
+      '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:0;width:158px;height:30px;transform:translateX(-50%);',
+      'pointer-events:none;border-radius:50%;opacity:.55;',
+      'background:radial-gradient(ellipse at center,color-mix(in srgb,var(--dpl-aura) 55%,transparent) 0%,transparent 72%);',
+      'animation:dpl-breathe 4.2s ease-in-out infinite;}',
+      '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.95;animation:dpl-pulse 1.7s ease-in-out infinite;}',
+      '#' + ROOT_ID + ' .dpl-ring::after{content:"";position:absolute;left:8%;right:8%;top:38%;height:1px;border-radius:1px;',
+      'background:linear-gradient(90deg,transparent,var(--dpl-aura),transparent);opacity:.65;}',
       '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:-8px;width:168px;height:186px;transform:translateX(-50%);',
       'overflow:hidden;pointer-events:none;opacity:0;border-radius:50%;}',
       '#' + ROOT_ID + ' .dpl-scan::after{content:"";position:absolute;left:0;width:100%;height:16px;filter:blur(4px);',
@@ -285,6 +294,7 @@ window.__ModuleLoader__.load({
       'border-radius:6px;cursor:pointer;color:#e8edf5;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.14);}',
       '#' + ROOT_ID + ' .dpl-bili-foot{padding:6px 10px;font-size:9.5px;opacity:.42;border-top:1px solid rgba(255,255,255,.06);}',
       '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
+      '@keyframes dpl-pulse{0%,100%{opacity:.5;filter:blur(0)}50%{opacity:1;filter:blur(1px)}}',
       '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
       '@keyframes dpl-blink{0%,100%{opacity:.25}50%{opacity:1}}',
       '@keyframes dpl-sweep{0%{top:-24px}100%{top:200px}}',
@@ -429,8 +439,10 @@ window.__ModuleLoader__.load({
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-idle.webp')
       figure.setAttribute('data-char', 'moss')
+      var ring = el('div', 'dpl-ring')
       var scan = el('div', 'dpl-scan')
       stage.appendChild(aura)
+      stage.appendChild(ring)
       stage.appendChild(figure)
       stage.appendChild(scan)
 
@@ -715,6 +727,34 @@ window.__ModuleLoader__.load({
       document.head.appendChild(style)
     }
 
+    /**
+     * 首次运行时，把它持久化的窗口布局写成「桌宠左侧」——
+     * 不要用程序化拖拽去挪它的窗口，那会和它自己的拖动/缩放状态打架（表现为窗口忽大忽小）。
+     */
+    function seedBiliLayout() {
+      try {
+        var key = 'bili-widget-v2'
+        var seeded = 'dsh-pet-liang:bili-seeded'
+        if (window.localStorage.getItem(seeded)) return
+        var raw = window.localStorage.getItem(key)
+        var state = raw ? JSON.parse(raw) : {}
+        if (!state || typeof state !== 'object') state = {}
+        var pet = overlay ? overlay.getBoundingClientRect() : null
+        var w = Math.max(360, Math.min(440, state.w || 400))
+        var h = Math.max(440, Math.min(600, state.h || 560))
+        var x = pet ? Math.max(12, Math.round(pet.left - w - 18)) : Math.max(12, (window.innerWidth || 1280) - w - 260)
+        var y = pet ? Math.max(12, Math.round(pet.bottom - h)) : 80
+        state.w = w
+        state.h = h
+        state.x = x
+        state.y = y
+        window.localStorage.setItem(key, JSON.stringify(state))
+        window.localStorage.setItem(seeded, '1')
+      } catch (e) {
+        /* 无痕模式：忽略 */
+      }
+    }
+
     /** 用它的拖拽条把浮窗拖到桌宠左侧，避免开在屏幕左上角挡视线。 */
     function placeBiliWin() {
       var win = document.querySelector('.dy-win')
@@ -771,9 +811,6 @@ window.__ModuleLoader__.load({
         ensureBiliChrome()
         launch.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, base)))
         document.dispatchEvent(new PointerEvent('pointerup', Object.assign({ buttons: 0 }, base)))
-        /* 等它渲染出来再摆位置；连点两次时第二次是关闭，不摆 */
-        window.setTimeout(placeBiliWin, 180)
-        window.setTimeout(placeBiliWin, 520)
         return true
       } catch (e) {
         return false
@@ -927,9 +964,20 @@ window.__ModuleLoader__.load({
         selection = fromDirectory
       }
 
+      /* 某些 store 在特定路径下不会通知订阅者，这里给一个低频兜底重算 */
+      var tickPair = react.useState(0)
+      var tick = tickPair[0]
+      var bumpTick = tickPair[1]
+      useEffect(function () {
+        var timer = window.setInterval(function () {
+          if (typeof bumpTick === 'function') bumpTick(function (n) { return n + 1 })
+        }, 1500)
+        return function () { window.clearInterval(timer) }
+      }, [])
+
       var decision = useMemo(function () {
         return decide({ sessionId: sessionId, running: running, selection: selection, modelState: modelState })
-      }, [sessionId, running, selection, modelState])
+      }, [sessionId, running, selection, modelState, tick])
 
       useEffect(function () {
         publish(decision)
@@ -970,6 +1018,7 @@ window.__ModuleLoader__.load({
 
       buildOverlay()
       ensureBiliChrome()
+      seedBiliLayout()
       try {
         if (!window.__dshPetBiliObserver) {
           var observer = new MutationObserver(function () {
