@@ -78,30 +78,128 @@ export function createMoss3D(canvas, opts) {
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 关节 ──────────────────────────────────────────────────────
-       模型结构实测：顶部横梁 + 头部 + 整条手臂被焊成同一个 mesh（Moss_arm），
-       只有机身（Moss_Main / Moss_Annexes / Moss_Glass）是独立 mesh。
-       所以唯一能无撕裂旋转的关节是「腕关节」：机身绕手臂末端摆动。
-       硬转整条手臂会把头部和机身一起拽走（已实测），因此不转手臂。 */
+    /* ── 关节（按实测结构）───────────────────────────────────────────
+       arm mesh 里零件的 y 分布（obj 局部坐标，整体 y = 4.3 … 93.4）：
+         横梁/顶座  79.9 … 93.4
+         上臂       60.6 … 79.9
+         前臂       25.0 … 60.6
+         手         4.3  … 25.0
+       因此三个关节轴：J1 = 79.9（肩）、J2 = 60.6（肘）、J3 = 25.0（腕）。
+       机身（Moss_Main/Annexes/Glass）螺栓固定在手上 —— 归到 J3 段，
+       所以腕关节转动时机身与手一起动，不会出现缝隙。
+       三段用「平级枢轴 + 累计角度」表达：上臂 θ1，前臂 θ1+θ2，手+机身 θ1+θ2+θ3。 */
     {
-      const body0 = obj.getObjectByName('Moss_Main')
-      if (body0) {
-        const mb = new THREE.Box3().setFromObject(body0)
-        /* 腕关节在机身右上角、手臂与机身相连处 */
-        const wristPos = new THREE.Vector3(
-          mb.max.x - (mb.max.x - mb.min.x) * 0.02,
-          mb.max.y - (mb.max.y - mb.min.y) * 0.06,
-          mb.getCenter(new THREE.Vector3()).z,
-        )
-        const wrist = new THREE.Group()
-        wrist.position.copy(obj.worldToLocal(wristPos.clone()))
-        obj.add(wrist)
-        obj.updateMatrixWorld(true)
+      const arm = obj.getObjectByName('Moss_arm')
+      const J1 = 79.9
+      const J2 = 60.6
+      const J3 = 25.0
+      if (arm) {
+        const geo = arm.geometry
+        const posAttr = geo.attributes.position
+        const norAttr = geo.attributes.normal
+        const uvAttr = geo.attributes.uv
+        const total = posAttr.count
+        const M = arm.matrix.clone()
+
+        /* 焊接 + 连通块，按块中心 y 分段 */
+        const weld = new Map()
+        const wid = new Int32Array(total)
+        for (let i = 0; i < total; i += 1) {
+          const k = posAttr.getX(i).toFixed(2) + ',' + posAttr.getY(i).toFixed(2) + ',' + posAttr.getZ(i).toFixed(2)
+          let id = weld.get(k)
+          if (id === undefined) { id = weld.size; weld.set(k, id) }
+          wid[i] = id
+        }
+        const par = new Int32Array(weld.size)
+        for (let i = 0; i < par.length; i += 1) par[i] = i
+        const find = (x) => { let r = x; while (par[r] !== r) r = par[r]; while (par[x] !== r) { const n = par[x]; par[x] = r; x = n } return r }
+        const join = (a, b) => { const ra = find(a); const rb = find(b); if (ra !== rb) par[ra] = rb }
+        for (let i = 0; i < total; i += 3) { join(wid[i], wid[i + 1]); join(wid[i], wid[i + 2]) }
+
+        const tmp = new THREE.Vector3()
+        const compY = new Map()
+        for (let i = 0; i < total; i += 1) {
+          const r = find(wid[i])
+          tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
+          const rec = compY.get(r)
+          if (!rec) compY.set(r, { y0: tmp.y, y1: tmp.y })
+          else { rec.y0 = Math.min(rec.y0, tmp.y); rec.y1 = Math.max(rec.y1, tmp.y) }
+        }
+        const bucketOf = new Map()
+        compY.forEach((rec, r) => {
+          const mid = (rec.y0 + rec.y1) / 2
+          bucketOf.set(r, mid > J1 ? 0 : mid > J2 ? 1 : mid > J3 ? 2 : 3)
+        })
+        const buckets = [[], [], [], []]
+        for (let i = 0; i < total; i += 3) buckets[bucketOf.get(find(wid[i]))].push(i)
+
+        const buildSub = (triStarts) => {
+          const count = triStarts.length * 3
+          const p2 = new Float32Array(count * 3)
+          const n2 = new Float32Array(count * 3)
+          const u2 = uvAttr ? new Float32Array(count * 2) : null
+          let w = 0
+          for (const start of triStarts) {
+            for (let k = 0; k < 3; k += 1) {
+              const idx = start + k
+              p2[w * 3] = posAttr.getX(idx); p2[w * 3 + 1] = posAttr.getY(idx); p2[w * 3 + 2] = posAttr.getZ(idx)
+              if (norAttr) { n2[w * 3] = norAttr.getX(idx); n2[w * 3 + 1] = norAttr.getY(idx); n2[w * 3 + 2] = norAttr.getZ(idx) }
+              if (u2) { u2[w * 2] = uvAttr.getX(idx); u2[w * 2 + 1] = uvAttr.getY(idx) }
+              w += 1
+            }
+          }
+          const g2 = new THREE.BufferGeometry()
+          g2.setAttribute('position', new THREE.BufferAttribute(p2, 3))
+          if (norAttr) g2.setAttribute('normal', new THREE.BufferAttribute(n2, 3))
+          if (u2) g2.setAttribute('uv', new THREE.BufferAttribute(u2, 2))
+          g2.computeBoundingSphere()
+          return g2
+        }
+
+        const parent = arm.parent
+        const makePart = (triStarts) => {
+          const m = new THREE.Mesh(buildSub(triStarts), arm.material)
+          m.frustumCulled = false
+          m.matrixAutoUpdate = false
+          m.matrix.copy(arm.matrix)
+          /* 先挂到父节点、算出正确的世界矩阵，attach 才不会把局部矩阵当世界矩阵 */
+          parent.add(m)
+          m.updateMatrixWorld(true)
+          return m
+        }
+        const pivotAt = (y) => {
+          /* 关节处的水平中心 */
+          let sx = 0; let sz = 0; let n = 0
+          for (let i = 0; i < total; i += 1) {
+            tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
+            if (Math.abs(tmp.y - y) < 3) { sx += tmp.x; sz += tmp.z; n += 1 }
+          }
+          const p = new THREE.Group()
+          p.position.set(n ? sx / n : 0, y, n ? sz / n : 0)
+          parent.add(p)
+          parent.updateMatrixWorld(true)
+          return p
+        }
+
+        /* 段 0：横梁（固定） */
+        makePart(buckets[0])
+
+        /* 段 1/2/3：各自挂到独立枢轴 */
+        const p1 = pivotAt(J1)
+        p1.attach(makePart(buckets[1]))
+        const p2 = pivotAt(J2)
+        p2.attach(makePart(buckets[2]))
+        const p3 = pivotAt(J3)
+        p3.attach(makePart(buckets[3]))
         ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
           const part = obj.getObjectByName(nm)
-          if (part) wrist.attach(part)
+          if (part) p3.attach(part)
         })
-        armWrist = wrist
+
+        arm.visible = false
+        armTop = p1
+        armMid = p2
+        armWrist = p3
       }
     }
 
@@ -185,11 +283,15 @@ export function createMoss3D(canvas, opts) {
     const speed = working ? 2.6 : 1
     if (armTop) {
       /* 肩关节与肘关节反向配合：手臂抬起时小臂回折，手始终靠近机身 */
-      /* 腕关节：机身像挂件一样绕手臂末端摆动 */
-      if (armWrist) {
-        const amp = working ? 2.6 : 1.8
-        armWrist.rotation.z = Math.sin(t * 0.7 * speed) * (amp * Math.PI / 180)
-        armWrist.rotation.x = Math.sin(t * 0.5 * speed + 0.8) * (amp * 0.35 * Math.PI / 180)
+      /* 三关节联动：肩 θ1，肘 θ1+θ2，腕 θ1+θ2+θ3（累计角度） */
+      if (armTop) {
+        const amp = working ? 4.6 : 2.8
+        const th1 = Math.sin(t * 0.62 * speed) * (amp * Math.PI / 180)
+        const th2 = -th1 * 0.55
+        const th3 = -th1 * 0.30
+        armTop.rotation.z = th1
+        if (armMid) armMid.rotation.z = th1 + th2
+        if (armWrist) armWrist.rotation.z = th1 + th2 + th3
       }
     }
     if (lensCore && lensHalo) {
