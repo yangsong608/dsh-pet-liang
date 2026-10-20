@@ -234,9 +234,12 @@ export function createMoss3D(canvas, opts) {
           blending: THREE.AdditiveBlending, depthWrite: false,
         }),
       )
-      core.position.copy(obj.worldToLocal(lensPos.clone()))
+      /* 红眼挂在机身所在的分组下，跟着关节一起转（否则大角度转动时灯光会留在原地） */
+      const eyeHost = mainMesh.parent || obj
+      eyeHost.updateMatrixWorld(true)
+      core.position.copy(eyeHost.worldToLocal(lensPos.clone()))
       core.renderOrder = 5
-      obj.add(core)
+      eyeHost.add(core)
 
       /* 柔光晕：径向渐变贴图 */
       const cvs = document.createElement('canvas')
@@ -252,14 +255,14 @@ export function createMoss3D(canvas, opts) {
         map: new THREE.CanvasTexture(cvs), transparent: true,
         blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9,
       }))
-      halo.position.copy(lensPos).add(new THREE.Vector3(0, 0, ms.z * 0.01))
+      halo.position.copy(eyeHost.worldToLocal(lensPos.clone())).add(new THREE.Vector3(0, 0, ms.z * 0.01))
       halo.scale.setScalar(radius * 10)
       halo.userData.base = radius * 10
       halo.renderOrder = 6
-      scene.add(halo)
+      eyeHost.add(halo)
       const lensLight = new THREE.PointLight(0xff3a14, working ? 3.2 : 1.5, ms.y * 0.9, 2)
-      lensLight.position.copy(obj.worldToLocal(lensPos.clone())).add(new THREE.Vector3(0, 0, ms.z * 0.35))
-      obj.add(lensLight)
+      lensLight.position.copy(eyeHost.worldToLocal(lensPos.clone())).add(new THREE.Vector3(0, 0, ms.z * 0.35))
+      eyeHost.add(lensLight)
       lensCore = core
       lensHalo = halo
       lensLamp = lensLight
@@ -275,7 +278,27 @@ export function createMoss3D(canvas, opts) {
       focusX = mb.getCenter(new THREE.Vector3()).x
     }
     const fovRad = (camera.fov * Math.PI) / 180
-    const dist = (size.y / 2) / Math.tan(fovRad / 2) * 1.16
+    /* 360° 偏航时模型扫过的最大半径：绕颈部轴（P1）的水平距离 */
+    let swept = 0
+    {
+      const axisX = -0.40
+      const axisZ = 18.00
+      const pv = new THREE.Vector3()
+      obj.traverse((n) => {
+        if (!n.isMesh || n.name === 'Moss_arm') return
+        const posAttr = n.geometry && n.geometry.attributes && n.geometry.attributes.position
+        if (!posAttr) return
+        n.updateMatrixWorld(true)
+        const step = Math.max(1, Math.floor(posAttr.count / 400))
+        for (let i = 0; i < posAttr.count; i += step) {
+          pv.fromBufferAttribute(posAttr, i).applyMatrix4(n.matrixWorld)
+          const r = Math.hypot(pv.x - axisX, pv.z - axisZ)
+          if (r > swept) swept = r
+        }
+      })
+    }
+    const span = Math.max(size.y, swept * 2) * 1.1
+    const dist = (span / 2) / Math.tan(fovRad / 2)
     /* 3/4 视角：正对时绕垂直轴的偏航会变成「往屏幕里外摆」，看不出来 */
     const AZ = 26 * Math.PI / 180
     camera.position.set(focusX + Math.sin(AZ) * dist, size.y * 0.06, Math.cos(AZ) * dist)
