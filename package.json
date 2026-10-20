@@ -1,0 +1,45 @@
+{
+  "name": "dsh-pet-liang",
+  "version": "0.1.0",
+  "private": true,
+  "description": "桌面宠物：DeepSeek 自带模型显示梁神（按推理等级四档），会话执行时切换为 MOSS 工作态，梁神↔MOSS 带全息换形动画，点击查看当前会话费用",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "client",
+    "assets",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "desktop-pet",
+    "liang",
+    "moss"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0",
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check client/client.js",
+    "test": "node scripts/pet-test.mjs"
+  }
+}

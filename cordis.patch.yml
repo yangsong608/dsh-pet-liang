@@ -1,0 +1,8 @@
+# dsh-pet-liang —— 桌宠：梁神 / MOSS
+#
+# 安装：dsh plugin --profile desktop add "link:/Volumes/软件目录/work/zkxh/deepseek/dsh-pet-liang"
+# 启用后右下角出现全息桌宠；点击形象看当前会话费用。
+- insert:
+    - id: dsh-pet-liang
+      name: dsh-pet-liang
+      inject: [webServer]
