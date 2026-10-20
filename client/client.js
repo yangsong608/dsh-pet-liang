@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '10'
+    var ASSET_V = '16'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -219,61 +219,60 @@ window.__ModuleLoader__.load({
     /* ────────────────────────── 样式 ────────────────────────── */
 
     var CSS = [
-      '#' + ROOT_ID + '{position:fixed;right:18px;bottom:96px;width:196px;z-index:2147483000;',
-      'font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;color:var(--dsw-alias-label-primary,#e8edf5);',
-      'user-select:none;-webkit-user-select:none;pointer-events:auto;}',
-      '#' + ROOT_ID + '{touch-action:none;}',
-      '#' + ROOT_ID + ' .dpl-stage{position:relative;width:196px;height:196px;display:flex;align-items:flex-end;justify-content:center;cursor:grab;}',
-      '#' + ROOT_ID + '.is-dragging .dpl-stage{cursor:grabbing;}',
-      '#' + ROOT_ID + '.is-dragging .dpl-figure{animation-play-state:paused;}',
-      '#' + ROOT_ID + ' .dpl-aura{position:absolute;left:50%;bottom:34px;width:190px;height:150px;transform:translateX(-50%);',
-      'filter:blur(22px);opacity:.12;border-radius:50%;transition:background .6s ease,opacity .6s ease;}',
-      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-aura{opacity:.55;}',
-      'animation:dpl-breathe 4.2s ease-in-out infinite;}',
-                  '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
-            /* 梁神：透明底立绘，直接浮着（不画圆框、不加背景） */
-      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:auto;max-width:176px;max-height:176px;}',
-      '#' + ROOT_ID + ' .dpl-pedestal{position:absolute;left:50%;bottom:-6px;width:168px;transform:translateX(-50%);',
-      'pointer-events:none;opacity:.55;animation:dpl-ped-glow 5.4s ease-in-out infinite;}',
-      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-pedestal{opacity:.82;}',
-      '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:0;width:150px;height:28px;transform:translateX(-50%);',
-      'pointer-events:none;border-radius:50%;opacity:.24;',
-      'background:radial-gradient(ellipse at center,color-mix(in srgb,var(--dpl-aura) 68%,transparent) 0%,transparent 72%);',
-      'animation:dpl-ring-spin 5.5s linear infinite;}',
-      '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.82;animation:dpl-ring-spin 1.8s linear infinite;}',
-      'body[data-ds-dark-theme] #' + ROOT_ID + ' .dpl-ring{opacity:.5;}',
-      'body[data-ds-dark-theme] #' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.9;}',
-      '#' + ROOT_ID + ' .dpl-ring::after{content:"";position:absolute;left:4%;right:4%;top:36%;height:1.5px;border-radius:2px;',
-      'background:linear-gradient(90deg,transparent,var(--dpl-aura),transparent);opacity:.7;}',
-      '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:-8px;width:168px;height:186px;transform:translateX(-50%);',
-      'overflow:hidden;pointer-events:none;opacity:0;border-radius:50%;}',
-      '#' + ROOT_ID + ' .dpl-scan::after{content:"";position:absolute;left:0;width:100%;height:16px;filter:blur(4px);',
-      'background:linear-gradient(to bottom,transparent,var(--dpl-aura),transparent);opacity:.62;',
-      '-webkit-mask-image:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent);',
-      'mask-image:linear-gradient(to right,transparent,#000 22%,#000 78%,transparent);}',
-      '#' + ROOT_ID + '.is-switching .dpl-scan{opacity:1;}',
-      '#' + ROOT_ID + '.is-switching .dpl-scan::after{animation:dpl-sweep .78s ease-in-out;}',
-      '#' + ROOT_ID + '.is-switching .dpl-figure{animation:dpl-swap .78s ease-in-out;}',
-      '#' + ROOT_ID + '.is-switching .dpl-aura{animation:dpl-flash .78s ease-in-out;}',
-      '#' + ROOT_ID + ' .dpl-hud{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:2px;',
-      'font-size:11px;letter-spacing:.04em;}',
-      '#' + ROOT_ID + ' .dpl-name{font-weight:650;color:var(--dpl-aura);text-shadow:0 0 10px color-mix(in srgb,var(--dpl-aura) 60%,transparent);}',
-      '#' + ROOT_ID + ' .dpl-state{opacity:.72;}',
-      '#' + ROOT_ID + ' .dpl-model{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
-      'opacity:.42;font-size:10px;padding-left:4px;border-left:1px solid color-mix(in srgb,var(--dpl-aura) 30%,transparent);}',
-      '#' + ROOT_ID + ' .dpl-model[data-unknown="1"]{opacity:.6;color:#c98b3a;}',
-      '#' + ROOT_ID + ' .dpl-dot{width:5px;height:5px;border-radius:50%;background:var(--dpl-aura);opacity:.8;}',
-      '#' + ROOT_ID + '[data-working="1"] .dpl-dot{animation:dpl-blink 1.1s ease-in-out infinite;}',
-      '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
-      '@keyframes dpl-pulse{0%,100%{opacity:.5;filter:blur(0)}50%{opacity:1;filter:blur(1px)}}',
-      '@keyframes dpl-ring-spin{0%{transform:translateX(-50%) rotate(0deg) scaleX(1)}50%{transform:translateX(-50%) rotate(180deg) scaleX(.84)}100%{transform:translateX(-50%) rotate(360deg) scaleX(1)}}',
-      '@keyframes dpl-ped-glow{0%,100%{opacity:.45;filter:blur(0px)}50%{opacity:.75;filter:blur(2px)}}',
-      '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
-      '@keyframes dpl-blink{0%,100%{opacity:.25}50%{opacity:1}}',
-      '@keyframes dpl-sweep{0%{top:-24px}100%{top:200px}}',
-      '@keyframes dpl-swap{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}35%{opacity:.18;transform:translateY(-4px) scale(1.07);filter:blur(3px)}',
-      '62%{opacity:0;transform:translateY(6px) scale(.93);filter:blur(6px)}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}',
-      '@keyframes dpl-flash{0%,100%{opacity:.55}46%{opacity:1;filter:blur(26px)}}',
+      '#' + ROOT_ID + '{position:fixed;right:20px;bottom:104px;width:152px;z-index:2147483000;',
+      'font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;color:#e8edf5;',
+      'user-select:none;-webkit-user-select:none;pointer-events:auto;touch-action:none;}',
+      'body:not([data-ds-dark-theme]) #' + ROOT_ID + '{color:#1b2430;}',
+
+      '#' + ROOT_ID + ' .orb{position:relative;width:152px;height:152px;cursor:grab;}',
+      '#' + ROOT_ID + '.is-dragging .orb{cursor:grabbing;}',
+
+      '#' + ROOT_ID + ' .orb-glow{position:absolute;inset:-16px;border-radius:50%;pointer-events:none;z-index:0;',
+      'background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--dpl-aura) 55%,transparent) 0%,transparent 68%);',
+      'filter:blur(10px);opacity:.35;animation:orb-glow 4.6s ease-in-out infinite;}',
+      '#' + ROOT_ID + '[data-working="1"] .orb-glow{opacity:.72;animation-duration:1.8s;}',
+
+      '#' + ROOT_ID + ' .orb-ring{position:absolute;inset:6px;border-radius:50%;z-index:2;pointer-events:none;overflow:hidden;',
+      '-webkit-clip-path:circle(50% at 50% 50%);clip-path:circle(50% at 50% 50%);',
+      'box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--dpl-aura) 42%,transparent);}',
+      '#' + ROOT_ID + ' .orb-ring::before{content:"";position:absolute;inset:-60%;',
+      'background:conic-gradient(from 0deg,transparent 0deg,transparent 250deg,',
+      'color-mix(in srgb,var(--dpl-aura) 55%,transparent) 300deg,transparent 340deg,transparent 360deg);',
+      'animation:orb-spin 5.2s linear infinite;}',
+      '#' + ROOT_ID + '[data-working="1"] .orb-ring::before{animation-duration:1.4s;}',
+
+      '#' + ROOT_ID + ' .orb-face{position:absolute;inset:6px;border-radius:50%;overflow:hidden;z-index:1;',
+      '-webkit-clip-path:circle(50% at 50% 50%);clip-path:circle(50% at 50% 50%);',
+      'background:radial-gradient(circle at 50% 30%,#1d2633 0%,#0a0d12 78%);',
+      'box-shadow:inset 0 0 22px rgba(0,0,0,.75),0 8px 22px rgba(0,0,0,.28);}',
+      'body:not([data-ds-dark-theme]) #' + ROOT_ID + ' .orb-face{background:radial-gradient(circle at 50% 30%,#f4f7fb 0%,#dfe6ef 80%);',
+      'box-shadow:inset 0 0 18px rgba(0,0,0,.12),0 8px 20px rgba(0,0,0,.15);}',
+
+      '#' + ROOT_ID + ' .orb-img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;border-radius:50%;',
+      '#' + ROOT_ID + '[data-character="moss"] .orb-img{object-position:50% 46%;}',
+      'animation:orb-breathe 4.6s ease-in-out infinite;transform-origin:50% 60%;}',
+      '#' + ROOT_ID + '[data-working="1"] .orb-img{animation-duration:1.7s;}',
+
+      '#' + ROOT_ID + ' .orb-dot{position:absolute;right:10px;bottom:12px;width:9px;height:9px;border-radius:50%;z-index:3;',
+      'background:var(--dpl-aura);box-shadow:0 0 10px var(--dpl-aura);opacity:.9;}',
+      '#' + ROOT_ID + '[data-working="1"] .orb-dot{animation:orb-blink 1.1s ease-in-out infinite;}',
+
+      '#' + ROOT_ID + ' .hud{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:9px;font-size:11px;letter-spacing:.03em;}',
+      '#' + ROOT_ID + ' .name{font-weight:700;color:var(--dpl-aura);}',
+      '#' + ROOT_ID + ' .state{opacity:.7;}',
+      '#' + ROOT_ID + ' .model{max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.42;font-size:10px;',
+      'padding-left:5px;border-left:1px solid color-mix(in srgb,var(--dpl-aura) 30%,transparent);}',
+      '#' + ROOT_ID + ' .model[data-unknown="1"]{opacity:.65;color:#c98b3a;}',
+
+      '#' + ROOT_ID + '.is-switching .orb-img{animation:orb-swap .72s ease-in-out;}',
+      '#' + ROOT_ID + '.is-switching .orb-ring{animation:orb-flash .72s ease-in-out;}',
+
+      '@keyframes orb-breathe{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.035) translateY(-2px)}}',
+      '@keyframes orb-glow{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.62;transform:scale(1.06)}}',
+      '@keyframes orb-spin{to{transform:rotate(360deg)}}',
+      '@keyframes orb-blink{0%,100%{opacity:.35}50%{opacity:1}}',
+      '@keyframes orb-swap{0%{opacity:1;filter:blur(0)}40%{opacity:.15;filter:blur(4px)}70%{opacity:0;filter:blur(8px)}100%{opacity:1;filter:blur(0)}}',
+      '@keyframes orb-flash{0%,100%{filter:brightness(1)}45%{filter:brightness(2.2)}}',
     ].join('')
 
     function ensureStyle() {
@@ -404,37 +403,32 @@ window.__ModuleLoader__.load({
       root.setAttribute('data-character', 'moss')
       root.setAttribute('data-working', '0')
 
-      var stage = el('div', 'dpl-stage')
-      var aura = el('div', 'dpl-aura')
-      var figure = el('img', 'dpl-figure')
+      var orb = el('div', 'orb')
+      var glow = el('div', 'orb-glow')
+      var ring = el('div', 'orb-ring')
+      var face = el('div', 'orb-face')
+      var figure = el('img', 'orb-img')
       figure.src = assetUrl('moss-idle.webp')
       figure.alt = ''
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-idle.webp')
       figure.setAttribute('data-char', 'moss')
-      var pedestal = el('img', 'dpl-pedestal')
-      pedestal.src = assetUrl('holo-pedestal.webp')
-      pedestal.alt = ''
-      pedestal.draggable = false
-      var ring = el('div', 'dpl-ring')
-      var scan = el('div', 'dpl-scan')
-      stage.appendChild(aura)
-      stage.appendChild(pedestal)
-      stage.appendChild(ring)
-      stage.appendChild(figure)
-      stage.appendChild(scan)
+      var dot = el('span', 'orb-dot')
+      face.appendChild(figure)
+      orb.appendChild(glow)
+      orb.appendChild(ring)
+      orb.appendChild(face)
+      orb.appendChild(dot)
 
-      var hud = el('div', 'dpl-hud')
-      var dot = el('span', 'dpl-dot')
-      var nameNode = el('span', 'dpl-name', 'MOSS')
-      var stateNode = el('span', 'dpl-state', '空闲')
-      var modelNode = el('span', 'dpl-model', '')
-      hud.appendChild(dot)
+      var hud = el('div', 'hud')
+      var nameNode = el('span', 'name', 'MOSS')
+      var stateNode = el('span', 'state', '空闲')
+      var modelNode = el('span', 'model', '')
       hud.appendChild(nameNode)
       hud.appendChild(stateNode)
       hud.appendChild(modelNode)
 
-      root.appendChild(stage)
+      root.appendChild(orb)
       root.appendChild(hud)
 
       /* 点击判定放在 root 上：pointer capture 会把 click 重定向到捕获元素，
@@ -485,11 +479,11 @@ window.__ModuleLoader__.load({
         (state.provider ? ' · ' + state.provider : '') +
         (state.character === 'liang' ? ' · ' + state.title : ' · MOSS')
 
-      var figure = overlay.querySelector('.dpl-figure')
-      var nameNode = overlay.querySelector('.dpl-name')
-      var stateNode = overlay.querySelector('.dpl-state')
-      var modelNode = overlay.querySelector('.dpl-model')
-      var aura = overlay.querySelector('.dpl-aura')
+      var figure = overlay.querySelector('.orb-img')
+      var nameNode = overlay.querySelector('.name')
+      var stateNode = overlay.querySelector('.state')
+      var modelNode = overlay.querySelector('.model')
+      var aura = overlay.querySelector('.orb-glow')
 
       if (nameNode) nameNode.textContent = state.title
       if (stateNode) stateNode.textContent = state.subtitle

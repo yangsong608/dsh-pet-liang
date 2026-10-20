@@ -4,7 +4,7 @@
 >
 > 版本 0.1.0 · 适配 dsh `>=0.2.0-rc.1 <0.3.0-0` · 无运行时依赖、无构建步骤
 
-![四档梁神](screenshots/05-tiers.png)
+![四档梁神：圆形头像舱](screenshots/05-tiers.png)
 
 ![梁神 / MOSS 工作态](screenshots/01-liang.png) ![MOSS 执行中](screenshots/02-moss-working.png)
 
@@ -83,8 +83,8 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 - 判定结果直接显示在 HUD 右侧的小字（如 `v4.1-flash`）；取不到时显示橙色 `模型未知`。完整判定也写到 `title`（悬停可见）、`data-provider`/`data-tier` 属性与控制台 `[dsh-pet-liang] session=… provider=… model=… effort=… running=… → liang/moss`。
 - 状态桥同时注册在两个座位（`conversation.input.dock` 与 `conversation.session.header.utilities`）互为兜底，任一挂载即可。
 - 单进程、无持久化：拖拽位置与档位不落盘（除了桌宠自己的位置记忆）。
-- 立绘是**透明底抠图**：梁神四档与 MOSS 全部用 GrabCut（OpenCV）抠成透明底，再按背景色模型二次剔除残留（灰块/光晕），最后高斯羽化 1.2px；立绘背后只有一圈呼吸光环，没有背景图。
-- 底部光环是纯 CSS：空闲时随呼吸缓慢明暗，执行中切换成 1.7s 脉冲。
+- 角色以**圆形头像舱（orb）**呈现：原图方形裁进圆内（`clip-path: circle()`），不抠图、不描边，因此没有抠图毛边和背景方块；舱内有暗/亮两套底色跟随主题。
+- 动效全部作用在舱体上：头像呼吸缩放（4.6s / 执行中 1.7s）、舱内旋转扫光（5.2s / 执行中 1.4s）、外圈光晕呼吸、状态点闪烁、换形时闪白 + 溶解。
 - 点桌宠唤起 dsh-bili-widget 后，会自动把它的浮窗拖到桌宠左侧；它自带的粉色悬浮球已隐藏（仍作为唤起锚点）。
 
 ## 结构

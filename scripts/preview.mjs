@@ -131,7 +131,7 @@ const PAGE = `<!doctype html>
   document.querySelectorAll('[data-mode]').forEach((btn) => {
     btn.onclick = () => {
       if (btn.dataset.mode === 'toggle-cost') {
-        document.querySelector('.dpl-stage').click()
+        document.querySelector('.orb').click()
         return
       }
       const running = btn.dataset.mode === 'moss-work'
@@ -151,7 +151,7 @@ const PAGE = `<!doctype html>
     API.preview.publish(API.decide(stateFor(tier)))
   }
   if (params.get('cost') === '1') {
-    setTimeout(() => document.querySelector('.dpl-stage').click(), 260)
+    setTimeout(() => document.querySelector('.orb').click(), 260)
   }
 </script>
 </body></html>`
