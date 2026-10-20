@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '69'
+    var ASSET_V = '70'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -464,7 +464,7 @@ window.__ModuleLoader__.load({
     function ensure3d(canvas) {
       if (moss3d || moss3dBroken || moss3dTried) return
       moss3dTried = true
-      var boot = BASE + '/3d/boot.js?v=' + ASSET_V
+      var boot = BASE + '/3d/boot.js?v=' + ASSET_V + '.' + Date.now()
       import(boot).then(function (mod) {
         moss3d = mod.createMoss3D(canvas, {
           base: BASE + '/3d/',
@@ -582,7 +582,8 @@ window.__ModuleLoader__.load({
         (state.modelLabel || state.model || '未知模型') +
         (state.effort ? ' · ' + state.effort : '') +
         (state.provider ? ' · ' + state.provider : '') +
-        (state.character === 'liang' ? ' · ' + state.title : ' · MOSS')
+        (state.character === 'liang' ? ' · ' + state.title : ' · MOSS') +
+        ' · 素材v' + ASSET_V
 
       var figure = overlay.querySelector('.figure')
       var nameNode = overlay.querySelector('.name')
