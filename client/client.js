@@ -292,6 +292,7 @@ window.__ModuleLoader__.load({
     var switchTimers = []
     var biliOpen = false
     var biliKind = 'hot'
+    var biliQuery = ''
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -547,6 +548,7 @@ window.__ModuleLoader__.load({
     var bw = null                 // 窗口根节点
     var biliOpen = false
     var biliKind = 'hot'
+    var biliQuery = ''
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -567,6 +569,14 @@ window.__ModuleLoader__.load({
         '#' + BW_ID + '.bw-dragging .bw-head{cursor:grabbing;}',
         '#' + BW_ID + ' .bw-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;',
         'color:var(--dpl-aura,#7f8ea3);}',
+        '#' + BW_ID + ' .bw-search{flex:1;min-width:0;display:flex;gap:5px;}',
+        '#' + BW_ID + ' .bw-input{flex:1;min-width:0;border:none;border-radius:7px;padding:4px 8px;font-size:11px;',
+        'outline:none;background:rgba(255,255,255,.08);color:#e8edf5;}',
+        '#' + BW_ID + ' .bw-input::placeholder{color:rgba(232,237,245,.38);}',
+        '#' + BW_ID + ' .bw-go,#' + BW_ID + ' .bw-refresh,#' + BW_ID + ' .bw-clear{font:inherit;font-size:10.5px;padding:3px 7px;',
+        'border-radius:6px;cursor:pointer;color:#c9d3df;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}',
+        '#' + BW_ID + ' .bw-go:hover,#' + BW_ID + ' .bw-refresh:hover,#' + BW_ID + ' .bw-clear:hover{color:#fff;background:rgba(255,255,255,.12);}',
+        '#' + BW_ID + ' .bw-refresh.spin{animation:bw-spin .8s linear infinite;}',
         '#' + BW_ID + ' .bw-tabs{display:flex;gap:4px;margin-left:auto;}',
         '#' + BW_ID + ' .bw-tabs button,#' + BW_ID + ' .bw-close{font:inherit;font-size:10.5px;padding:3px 8px;',
         'border-radius:6px;cursor:pointer;color:#9aa7b8;',
@@ -588,6 +598,7 @@ window.__ModuleLoader__.load({
         '#' + BW_ID + ' .bw-back{position:absolute;left:8px;top:8px;z-index:2;font-size:10.5px;padding:3px 8px;border-radius:6px;',
         'cursor:pointer;color:#e8edf5;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.16);}',
         '#' + BW_ID + ' .bw-foot{padding:6px 10px;font-size:9.5px;opacity:.45;border-top:1px solid rgba(255,255,255,.07);flex:none;}',
+        '@keyframes bw-spin{to{transform:rotate(360deg)}}',
         '#' + BW_ID + ' .bw-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:se-resize;touch-action:none;}',
         '#' + BW_ID + ' .bw-resize::after{content:"";position:absolute;right:4px;bottom:4px;width:8px;height:8px;',
         'border-right:2px solid rgba(255,255,255,.35);border-bottom:2px solid rgba(255,255,255,.35);border-bottom-right-radius:3px;}',
@@ -658,6 +669,53 @@ window.__ModuleLoader__.load({
 
       var head = el('div', 'bw-head')
       head.appendChild(el('span', 'bw-title', 'Bilibili'))
+
+      var searchWrap = el('div', 'bw-search')
+      var input = document.createElement('input')
+      input.className = 'bw-input'
+      input.type = 'search'
+      input.placeholder = '搜索视频，回车确认'
+      input.addEventListener('keydown', function (event) {
+        event.stopPropagation()
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          doSearch(input.value)
+        }
+      })
+      var go = el('button', 'bw-go', '搜索')
+      go.type = 'button'
+      go.addEventListener('click', function (event) {
+        event.stopPropagation()
+        doSearch(input.value)
+      })
+      searchWrap.appendChild(input)
+      searchWrap.appendChild(go)
+      head.appendChild(searchWrap)
+
+      var refresh = el('button', 'bw-refresh', '↻')
+      refresh.type = 'button'
+      refresh.title = '刷新'
+      refresh.addEventListener('click', function (event) {
+        event.stopPropagation()
+        if (biliMode === 'player') {
+          biliMode = 'list'
+          biliCurrent = null
+        }
+        biliList = null
+        biliError = ''
+        renderBili()
+        void loadBili()
+      })
+      head.appendChild(refresh)
+
+      var close = el('button', 'bw-close', '×')
+      close.type = 'button'
+      close.addEventListener('click', function (event) {
+        event.stopPropagation()
+        closeBili()
+      })
+      head.appendChild(close)
+
       var tabs = el('div', 'bw-tabs')
       ;[['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
         var button = el('button', '', pair[1])
@@ -665,6 +723,7 @@ window.__ModuleLoader__.load({
         button.setAttribute('data-kind', pair[0])
         button.addEventListener('click', function (event) {
           event.stopPropagation()
+          biliQuery = ''
           if (biliKind === pair[0] && biliList) return
           biliKind = pair[0]
           biliList = null
@@ -674,14 +733,19 @@ window.__ModuleLoader__.load({
         })
         tabs.appendChild(button)
       })
-      head.appendChild(tabs)
-      var close = el('button', 'bw-close', '×')
-      close.type = 'button'
-      close.addEventListener('click', function (event) {
+      var clear = el('button', 'bw-clear', '清除搜索')
+      clear.type = 'button'
+      clear.hidden = true
+      clear.addEventListener('click', function (event) {
         event.stopPropagation()
-        closeBili()
+        biliQuery = ''
+        biliList = null
+        biliMode = 'list'
+        renderBili()
+        void loadBili()
       })
-      head.appendChild(close)
+      tabs.appendChild(clear)
+      head.appendChild(tabs)
 
       var body = el('div', 'bw-body')
       var foot = el('div', 'bw-foot', '拖动标题栏移动 · 右下角缩放 · Esc 关闭')
@@ -754,6 +818,19 @@ window.__ModuleLoader__.load({
       return BASE + '/api/bili-img?u=' + encodeURIComponent(target)
     }
 
+    function doSearch(raw) {
+      var keyword = String(raw || '').trim()
+      if (!keyword) return
+      biliQuery = keyword.slice(0, 60)
+      biliKind = 'hot'
+      biliList = null
+      biliError = ''
+      biliMode = 'list'
+      biliCurrent = null
+      renderBili()
+      void loadBili()
+    }
+
     function renderBili() {
       if (!bw) return
       var head = bw.querySelector('.bw-head')
@@ -761,10 +838,12 @@ window.__ModuleLoader__.load({
       var foot = bw.querySelector('.bw-foot')
       if (!head || !body) return
 
-      ;[].forEach.call(head.querySelectorAll('.bw-tabs button'), function (button) {
-        if (button.getAttribute('data-kind') === biliKind) button.setAttribute('data-active', '1')
+      ;[].forEach.call(head.querySelectorAll('.bw-tabs button[data-kind]'), function (button) {
+        if (!biliQuery && button.getAttribute('data-kind') === biliKind) button.setAttribute('data-active', '1')
         else button.removeAttribute('data-active')
       })
+      var clearBtn = head.querySelector('.bw-clear')
+      if (clearBtn) clearBtn.hidden = !biliQuery
 
       while (body.firstChild) body.removeChild(body.firstChild)
 
@@ -800,7 +879,7 @@ window.__ModuleLoader__.load({
       } else if (!biliList) {
         body.appendChild(el('div', 'bw-note', '正在加载…'))
       } else if (!biliList.length) {
-        body.appendChild(el('div', 'bw-note', '这一档暂时没有拉到视频'))
+        body.appendChild(el('div', 'bw-note', biliQuery ? ('没有搜到「' + biliQuery + '」相关的视频') : '这一档暂时没有拉到视频'))
       } else {
         biliList.forEach(function (item) {
           var row = el('div', 'bw-item')
@@ -828,8 +907,11 @@ window.__ModuleLoader__.load({
 
     async function loadBili() {
       biliError = ''
+      var endpoint = biliQuery
+        ? BASE + '/api/bili-search?keyword=' + encodeURIComponent(biliQuery)
+        : BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16'
       try {
-        var response = await fetch(BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16', { headers: { Accept: 'application/json' } })
+        var response = await fetch(endpoint, { headers: { Accept: 'application/json' } })
         var payload = await response.json()
         if (!payload || payload.ok !== true) {
           biliError = 'B 站接口暂时不可达：' + ((payload && payload.error) || '未知错误')
