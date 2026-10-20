@@ -68,7 +68,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 
 | 文件 | 来源 |
 |---|---|
-| `assets/liang-1..4.webp` | qwen-image-3.0 生成一张帝王肖像，四档**同一张脸**只做色彩饱和/亮度/光晕分级（避免切档时"换人"） |
+| `assets/liang-1..4.webp` | 取自 [liang-intensity-calibrator](https://github.com/Lichtspektrum/liang-intensity-calibrator)（MIT，经 dsh-liang-skin 转制）的四个强度锚点 level-01 / level-10 / level-22 / stage-30 |
 | `assets/moss-idle.webp` / `moss-work.webp` | qwen-image-3.0 生成：黑色单体积分机 + 红色摄像眼（《流浪地球》里 MOSS/550W 的形态，不是人形机器人）；工作态换成亮起红光 + 金色环那张 |
 | `assets/holo-pedestal.webp` | qwen-image-3.0 生成的全息基座，裁成横条并加边缘遮罩 |
 
@@ -76,6 +76,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 
 ## 边界
 
+- 素材许可：梁神人像来自上游 MIT 项目，见 [NOTICE.md](./NOTICE.md)。
 - **不调用模型**：只用宿主已有的会话状态与用量投影，零额外 token。
 - 桌宠挂在会话输入区的 dock 座位上，因此"当前会话"指的是你正打开的那个会话；没有会话时显示 MOSS 空闲兜底。
 - 费用是"按价目折算"的核算，不等于账单；企业折扣/协议价请改 `lib/index.js` 的 `PRICES`。

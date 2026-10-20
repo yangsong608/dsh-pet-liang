@@ -36,6 +36,8 @@ window.__ModuleLoader__.load({
     var BASE = '/dsh-pet-liang'
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
+    /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
+    var ASSET_V = '3'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -228,7 +230,18 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;mix-blend-mode:screen;',
       'animation:dpl-breathe 4.2s ease-in-out infinite;}',
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
-      '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:10px;width:158px;height:32px;transform:translateX(-50%);',
+            /* 梁神：用 liang-intensity-calibrator 的原始人像，做成圆形投影徽章 */
+      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:150px;height:150px;object-fit:cover;border-radius:50%;',
+      'border:1px solid color-mix(in srgb,var(--dpl-aura) 52%,transparent);',
+      'box-shadow:0 0 26px color-mix(in srgb,var(--dpl-aura) 34%,transparent),inset 0 0 34px rgba(0,0,0,.55);',
+      '-webkit-mask-image:radial-gradient(circle at 50% 46%,#000 62%,rgba(0,0,0,.72) 78%,transparent 92%);',
+      'mask-image:radial-gradient(circle at 50% 46%,#000 62%,rgba(0,0,0,.72) 78%,transparent 92%);}',
+      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure-wrap{position:relative;}',
+      '#' + ROOT_ID + '[data-character="liang"] .dpl-scanlines{opacity:1;}',
+      '#' + ROOT_ID + ' .dpl-scanlines{position:absolute;left:50%;bottom:42px;width:150px;height:150px;border-radius:50%;',
+      'transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity .3s ease;',
+      'background:repeating-linear-gradient(to bottom,rgba(120,220,255,.13) 0 1px,transparent 1px 3px);mix-blend-mode:screen;}',
+'#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:10px;width:158px;height:32px;transform:translateX(-50%);',
       'border-radius:50%;border:1px solid var(--dpl-aura);opacity:.28;pointer-events:none;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.75;animation:dpl-spin 3.4s linear infinite;}',
       '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:0;width:168px;height:186px;transform:translateX(-50%);',
@@ -285,7 +298,7 @@ window.__ModuleLoader__.load({
     var costLoading = false
 
     function assetUrl(file) {
-      return BASE + '/assets/' + file
+      return BASE + '/assets/' + file + '?v=' + ASSET_V
     }
 
     function el(tag, cls, text) {
@@ -405,11 +418,13 @@ window.__ModuleLoader__.load({
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-idle.webp')
       figure.setAttribute('data-char', 'moss')
+      var scanlines = el('div', 'dpl-scanlines')
       var scan = el('div', 'dpl-scan')
       var ring = el('div', 'dpl-ring')
       stage.appendChild(aura)
       stage.appendChild(base)
       stage.appendChild(figure)
+      stage.appendChild(scanlines)
       stage.appendChild(scan)
       stage.appendChild(ring)
 
