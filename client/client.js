@@ -179,53 +179,6 @@ window.__ModuleLoader__.load({
       return decision
     }
 
-    /** 人民币金额的可读格式：小额保留 4 位，大额两位。 */
-    function formatCny(value) {
-      var n = Number(value)
-      if (!Number.isFinite(n)) return '—'
-      if (n === 0) return '¥0'
-      if (n < 0.01) return '¥' + n.toFixed(5)
-      if (n < 1) return '¥' + n.toFixed(4)
-      return '¥' + n.toFixed(2)
-    }
-
-    function formatTokens(value) {
-      var n = Number(value)
-      if (!Number.isFinite(n)) return '—'
-      if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'
-      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k'
-      return String(Math.round(n))
-    }
-
-    /** 接口返回 → 弹层行；缺数据显示占位，不伪造数字。 */
-    function costLines(payload) {
-      if (!payload || payload.ok !== true) {
-        return {
-          ok: false,
-          rows: [],
-          note: (payload && payload.hint) || '暂时取不到用量（会话还没产生 token，或宿主未暴露用量投影）。',
-          total: '—',
-        }
-      }
-      var tokens = payload.tokens || {}
-      var cost = payload.cost || {}
-      var parts = cost.parts || {}
-      return {
-        ok: true,
-        total: formatCny(cost.cny),
-        rows: [
-          { key: '缓存命中', tokens: formatTokens(tokens.cacheHit), cny: formatCny(parts.cacheHit) },
-          { key: '输入（未命中）', tokens: formatTokens(Math.max(0, (tokens.input || 0) - (tokens.cacheHit || 0))), cny: formatCny(parts.input) },
-          { key: '输出', tokens: formatTokens(tokens.output), cny: formatCny(parts.output) },
-        ],
-        note:
-          (payload.cost && payload.cost.label ? payload.cost.label + ' · ' : '') +
-          (payload.peak ? payload.peak.label : '') +
-          ' · 价目 CNY/1M',
-        source: payload.source || '',
-      }
-    }
-
     /* ────────────────────────── 状态广播 ────────────────────────── */
 
     var listeners = new Set()
@@ -307,18 +260,40 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .dpl-model[data-unknown="1"]{opacity:.6;color:#c98b3a;}',
       '#' + ROOT_ID + ' .dpl-dot{width:5px;height:5px;border-radius:50%;background:var(--dpl-aura);opacity:.8;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-dot{animation:dpl-blink 1.1s ease-in-out infinite;}',
-      '#' + ROOT_ID + ' .dpl-cost{position:absolute;right:0;bottom:calc(100% - 10px);width:236px;padding:12px 13px;',
-      'border-radius:12px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#0d1117) 92%,transparent);',
-      'border:1px solid color-mix(in srgb,var(--dpl-aura) 34%,transparent);',
-      'box-shadow:0 14px 38px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.03) inset;',
-      'backdrop-filter:blur(14px);font-size:11.5px;line-height:1.55;}',
-      '#' + ROOT_ID + ' .dpl-cost[hidden]{display:none;}',
-      '#' + ROOT_ID + ' .dpl-cost-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}',
-      '#' + ROOT_ID + ' .dpl-cost-total{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--dpl-aura);}',
-      '#' + ROOT_ID + ' .dpl-cost-row{display:flex;justify-content:space-between;gap:8px;opacity:.86;}',
-      '#' + ROOT_ID + ' .dpl-cost-row span:last-child{font-variant-numeric:tabular-nums;}',
-      '#' + ROOT_ID + ' .dpl-cost-note{margin-top:8px;padding-top:7px;border-top:1px dashed color-mix(in srgb,var(--dpl-aura) 22%,transparent);',
-      'opacity:.6;font-size:10.5px;line-height:1.5;}',
+      /* B 站小窗 */
+      '#' + ROOT_ID + ' .dpl-bili{position:absolute;right:0;bottom:calc(100% - 6px);width:344px;',
+      'border-radius:14px;background:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#0d1117) 94%,transparent);',
+      'border:1px solid color-mix(in srgb,var(--dpl-aura) 30%,transparent);',
+      'box-shadow:0 18px 44px rgba(0,0,0,.5);backdrop-filter:blur(16px);overflow:hidden;}',
+      '#' + ROOT_ID + ' .dpl-bili[hidden]{display:none;}',
+      '#' + ROOT_ID + ' .dpl-bili-head{display:flex;align-items:center;gap:8px;padding:8px 10px;',
+      'border-bottom:1px solid rgba(255,255,255,.06);}',
+      '#' + ROOT_ID + ' .dpl-bili-title{font-size:11px;font-weight:700;letter-spacing:.1em;',
+      'text-transform:uppercase;color:var(--dpl-aura);opacity:.9;}',
+      '#' + ROOT_ID + ' .dpl-bili-tabs{display:flex;gap:4px;margin-left:auto;}',
+      '#' + ROOT_ID + ' .dpl-bili-tabs button,#' + ROOT_ID + ' .dpl-bili-close{',
+      'font:inherit;font-size:10.5px;padding:3px 7px;border-radius:6px;cursor:pointer;',
+      'color:var(--dsw-alias-label-secondary,#9aa7b8);background:rgba(255,255,255,.05);',
+      'border:1px solid rgba(255,255,255,.08);}',
+      '#' + ROOT_ID + ' .dpl-bili-tabs button[data-active="1"]{color:#0b0e13;background:var(--dpl-aura);border-color:transparent;}',
+      '#' + ROOT_ID + ' .dpl-bili-close{padding:3px 6px;line-height:1;}',
+      '#' + ROOT_ID + ' .dpl-bili-body{max-height:330px;overflow-y:auto;overscroll-behavior:contain;}',
+      '#' + ROOT_ID + ' .dpl-bili-body::-webkit-scrollbar{width:6px;}',
+      '#' + ROOT_ID + ' .dpl-bili-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:3px;}',
+      '#' + ROOT_ID + ' .dpl-bili-item{display:flex;gap:8px;padding:7px 10px;cursor:pointer;align-items:center;}',
+      '#' + ROOT_ID + ' .dpl-bili-item:hover{background:rgba(255,255,255,.05);}',
+      '#' + ROOT_ID + ' .dpl-bili-item img{width:74px;height:46px;object-fit:cover;border-radius:6px;flex:none;',
+      'background:rgba(255,255,255,.06);}',
+      '#' + ROOT_ID + ' .dpl-bili-meta{min-width:0;flex:1;}',
+      '#' + ROOT_ID + ' .dpl-bili-name{font-size:11.5px;line-height:1.35;max-height:2.7em;overflow:hidden;',
+      'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}',
+      '#' + ROOT_ID + ' .dpl-bili-sub{font-size:10px;opacity:.5;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '#' + ROOT_ID + ' .dpl-bili-note{padding:14px;font-size:11px;opacity:.65;text-align:center;line-height:1.6;}',
+      '#' + ROOT_ID + ' .dpl-bili-play{position:relative;background:#000;}',
+      '#' + ROOT_ID + ' .dpl-bili-play iframe{display:block;width:100%;height:196px;border:0;background:#000;}',
+      '#' + ROOT_ID + ' .dpl-bili-back{position:absolute;left:8px;top:8px;z-index:2;font-size:10.5px;padding:3px 7px;',
+      'border-radius:6px;cursor:pointer;color:#e8edf5;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.14);}',
+      '#' + ROOT_ID + ' .dpl-bili-foot{padding:6px 10px;font-size:9.5px;opacity:.42;border-top:1px solid rgba(255,255,255,.06);}',
       '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
       '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
       '@keyframes dpl-blink{0%,100%{opacity:.25}50%{opacity:1}}',
@@ -340,9 +315,12 @@ window.__ModuleLoader__.load({
 
     var overlay = null
     var switchTimers = []
-    var costOpen = false
-    var costPayload = null
-    var costLoading = false
+    var biliOpen = false
+    var biliKind = 'hot'
+    var biliMode = 'list'
+    var biliList = null
+    var biliError = ''
+    var biliCurrent = null
 
     function assetUrl(file) {
       return BASE + '/assets/' + file + '?v=' + ASSET_V
@@ -485,10 +463,10 @@ window.__ModuleLoader__.load({
       hud.appendChild(stateNode)
       hud.appendChild(modelNode)
 
-      var cost = el('div', 'dpl-cost')
-      cost.hidden = true
+      var bili = el('div', 'dpl-bili')
+      bili.hidden = true
 
-      root.appendChild(cost)
+      root.appendChild(bili)
       root.appendChild(stage)
       root.appendChild(hud)
 
@@ -497,11 +475,20 @@ window.__ModuleLoader__.load({
       root.addEventListener('click', function (event) {
         event.stopPropagation()
         if (suppressClick) return
-        if (event.target && event.target.closest && event.target.closest('.dpl-cost')) return
-        void toggleCost()
+        if (event.target && event.target.closest && event.target.closest('.dpl-bili')) return
+        void toggleBili()
       })
       document.addEventListener('click', function () {
-        if (costOpen) closeCost()
+        if (biliOpen) closeBili()
+      })
+      document.addEventListener('keydown', function (event) {
+        if (!biliOpen || event.key !== 'Escape') return
+        if (biliMode === 'player') {
+          biliMode = 'list'
+          renderBili()
+        } else {
+          closeBili()
+        }
       })
 
       document.body.appendChild(root)
@@ -589,64 +576,164 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function costMarkup() {
-      if (!overlay) return
-      var box = overlay.querySelector('.dpl-cost')
-      if (!box) return
-      while (box.firstChild) box.removeChild(box.firstChild)
+    /* ────────────────────────── B 站小窗 ────────────────────────── */
 
-      var lines = costLines(costPayload)
-      var head = el('div', 'dpl-cost-head')
-      var left = el('div')
-      left.appendChild(el('div', '', current.modelLabel || current.model || '当前会话'))
-      left.style.fontWeight = '600'
-      left.style.opacity = '0.9'
-      var total = el('div', 'dpl-cost-total', lines.total)
-      head.appendChild(left)
-      head.appendChild(total)
-      box.appendChild(head)
+    function formatDuration(seconds) {
+      var total = Number(seconds) || 0
+      var m = Math.floor(total / 60)
+      var sec = total % 60
+      return m + ':' + (sec < 10 ? '0' + sec : String(sec))
+    }
 
-      if (!lines.ok) {
-        box.appendChild(el('div', 'dpl-cost-note', lines.note))
+    function formatViews(value) {
+      var n = Number(value) || 0
+      if (n >= 1e8) return (n / 1e8).toFixed(1) + '亿'
+      if (n >= 1e4) return (n / 1e4).toFixed(1) + '万'
+      return String(n)
+    }
+
+    function coverUrl(pic) {
+      if (!pic) return ''
+      var target = pic.indexOf('//') === 0 ? 'https:' + pic : pic
+      return BASE + '/api/bili-img?u=' + encodeURIComponent(target)
+    }
+
+    function biliPanel() {
+      return overlay ? overlay.querySelector('.dpl-bili') : null
+    }
+
+    function renderBili() {
+      var panel = biliPanel()
+      if (!panel) return
+      while (panel.firstChild) panel.removeChild(panel.firstChild)
+
+      var head = el('div', 'dpl-bili-head')
+      head.appendChild(el('span', 'dpl-bili-title', 'Bilibili'))
+      var tabs = el('div', 'dpl-bili-tabs')
+      ;[['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
+        var button = el('button', '', pair[1])
+        button.type = 'button'
+        button.setAttribute('data-kind', pair[0])
+        if (biliKind === pair[0]) button.setAttribute('data-active', '1')
+        button.addEventListener('click', function (event) {
+          event.stopPropagation()
+          if (biliKind === pair[0] && biliList) return
+          biliKind = pair[0]
+          biliList = null
+          biliMode = 'list'
+          renderBili()
+          void loadBili()
+        })
+        tabs.appendChild(button)
+      })
+      head.appendChild(tabs)
+      var close = el('button', 'dpl-bili-close', '×')
+      close.type = 'button'
+      close.addEventListener('click', function (event) {
+        event.stopPropagation()
+        closeBili()
+      })
+      head.appendChild(close)
+      panel.appendChild(head)
+
+      if (biliMode === 'player' && biliCurrent) {
+        var play = el('div', 'dpl-bili-play')
+        var back = el('button', 'dpl-bili-back', '← 返回')
+        back.type = 'button'
+        back.addEventListener('click', function (event) {
+          event.stopPropagation()
+          biliMode = 'list'
+          biliCurrent = null
+          renderBili()
+        })
+        play.appendChild(back)
+        var frame = document.createElement('iframe')
+        frame.allow = 'autoplay; fullscreen; picture-in-picture'
+        frame.setAttribute('allowfullscreen', 'true')
+        frame.src =
+          'https://player.bilibili.com/player.html?bvid=' +
+          encodeURIComponent(biliCurrent.bvid) +
+          '&autoplay=1&high_quality=1&danmaku=1'
+        play.appendChild(frame)
+        panel.appendChild(play)
+        panel.appendChild(el('div', 'dpl-bili-foot', 'Esc 返回列表 · 点 × 关掉小窗'))
         return
       }
-      lines.rows.forEach(function (row) {
-        var line = el('div', 'dpl-cost-row')
-        line.appendChild(el('span', '', row.key + '  ' + row.tokens))
-        line.appendChild(el('span', '', row.cny))
-        box.appendChild(line)
-      })
-      box.appendChild(el('div', 'dpl-cost-note', lines.note))
+
+      var body = el('div', 'dpl-bili-body')
+      if (biliError) {
+        body.appendChild(el('div', 'dpl-bili-note', biliError))
+      } else if (!biliList) {
+        body.appendChild(el('div', 'dpl-bili-note', '正在加载…'))
+      } else if (!biliList.length) {
+        body.appendChild(el('div', 'dpl-bili-note', '这一档暂时没有拉到视频'))
+      } else {
+        biliList.forEach(function (item) {
+          var row = el('div', 'dpl-bili-item')
+          if (item.pic) {
+            var thumb = document.createElement('img')
+            thumb.loading = 'lazy'
+            thumb.alt = ''
+            thumb.src = coverUrl(item.pic)
+            row.appendChild(thumb)
+          }
+          var meta = el('div', 'dpl-bili-meta')
+          meta.appendChild(el('div', 'dpl-bili-name', item.title || item.bvid))
+          var sub = (item.owner || '') + ' · ' + formatViews(item.views) + ' 播放 · ' + formatDuration(item.duration)
+          meta.appendChild(el('div', 'dpl-bili-sub', sub))
+          row.appendChild(meta)
+          row.addEventListener('click', function (event) {
+            event.stopPropagation()
+            biliCurrent = item
+            biliMode = 'player'
+            renderBili()
+          })
+          body.appendChild(row)
+        })
+      }
+      panel.appendChild(body)
+      panel.appendChild(el('div', 'dpl-bili-foot', '点视频直接播放 · 数据来自 B 站公开接口'))
     }
 
-    async function toggleCost() {
-      if (costOpen) return closeCost()
-      if (!overlay) return
-      costOpen = true
-      var box = overlay.querySelector('.dpl-cost')
-      box.hidden = false
-      if (!costPayload) {
-        box.textContent = '正在结算…'
-      }
-      var query = new URLSearchParams()
-      if (current.sessionId) query.set('sessionId', current.sessionId)
-      if (current.model) query.set('model', current.model)
-      if (current.provider) query.set('provider', current.provider)
+    async function loadBili() {
+      biliError = ''
       try {
-        var response = await fetch(BASE + '/api/cost?' + query.toString(), { headers: { Accept: 'application/json' } })
-        costPayload = await response.json()
+        var response = await fetch(BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=12', {
+          headers: { Accept: 'application/json' },
+        })
+        var payload = await response.json()
+        if (!payload || payload.ok !== true) {
+          biliError = 'B 站接口暂时不可达：' + ((payload && payload.error) || '未知错误')
+          biliList = []
+        } else {
+          biliList = Array.isArray(payload.list) ? payload.list : []
+        }
       } catch (err) {
-        costPayload = { ok: false, hint: '费用接口不可达：' + String((err && err.message) || err) }
+        biliError = 'B 站接口暂时不可达：' + String((err && err.message) || err)
+        biliList = []
       }
-      if (!costOpen) return
-      costMarkup()
+      if (!biliOpen) return
+      renderBili()
     }
 
-    function closeCost() {
+    function toggleBili() {
+      if (biliOpen) return closeBili()
       if (!overlay) return
-      var box = overlay.querySelector('.dpl-cost')
-      if (box) box.hidden = true
-      costOpen = false
+      biliOpen = true
+      biliMode = 'list'
+      biliCurrent = null
+      var panel = biliPanel()
+      panel.hidden = false
+      renderBili()
+      if (!biliList) void loadBili()
+    }
+
+    function closeBili() {
+      var panel = biliPanel()
+      if (panel) panel.hidden = true
+      biliOpen = false
+      biliMode = 'list'
+      biliCurrent = null
     }
 
     /* ────────────────────────── 桥：宿主状态 → 浮动层 ────────────────────────── */
@@ -726,16 +813,22 @@ window.__ModuleLoader__.load({
           })
         : undefined
 
-      var running = false
+      /* 运行态取两个来源的交集：状态表可能因为某个事件没到而一直停在 running=true，
+         会话摘要（Host 列表）通常更早翻成 false，两者都为真才算「在跑」。 */
+      var statusRunning
       if (useSessionStatus) {
-        running = useSessionStatus(function (map) {
-          if (!map || typeof map.get !== 'function') return false
+        statusRunning = useSessionStatus(function (map) {
+          if (!map || typeof map.get !== 'function') return undefined
           var row = map.get(sessionId)
-          return !!(row && row.running === true)
+          if (!row) return undefined
+          return row.running === true
         })
-      } else if (summary) {
-        running = summary.running === true
       }
+      var summaryRunning = summary ? summary.running === true : undefined
+      var running
+      if (statusRunning === undefined) running = summaryRunning === true
+      else if (summaryRunning === undefined) running = statusRunning
+      else running = statusRunning && summaryRunning
 
       /* 模型：会话投影是权威来源（durable），不依赖目录异步加载 */
       var projected = undefined
@@ -833,8 +926,6 @@ window.__ModuleLoader__.load({
       decide: decide,
       readSelection: readSelection,
       tierForSelection: tierForSelection,
-      costLines: costLines,
-      formatCny: formatCny,
       LIANG_TIERS: LIANG_TIERS,
       /* 预览页（scripts/preview.mjs）用它直接驱动状态，不在生产路径上调用 */
       preview: {

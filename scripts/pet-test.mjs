@@ -53,6 +53,8 @@ host.apply(fakeCtx)
 
 check('宿主半注册了费用路由', routes.has('/dsh-pet-liang/api/cost'))
 check('宿主半注册了健康检查', routes.has('/dsh-pet-liang/api/health'))
+check('宿主半注册了 B 站列表代理', routes.has('/dsh-pet-liang/api/bili'))
+check('宿主半注册了 B 站图片代理', routes.has('/dsh-pet-liang/api/bili-img'))
 check(
   '宿主半注册了立绘与基座资源',
   routes.has('/dsh-pet-liang/assets/liang-1.webp') && routes.has('/dsh-pet-liang/assets/holo-pedestal.webp'),
@@ -189,13 +191,6 @@ check('没有会话时给 MOSS 空闲兜底', noSession.character === 'moss' && 
 
 check('单个推理档位落到中间档', internals.tierForSelection({ efforts: [{ id: 'only' }], effort: 'only' }) === 2)
 
-const lines = internals.costLines(ok.json)
-check('费用弹层有 3 行明细', lines.ok === true && lines.rows.length === 3, lines.total)
-check('金额格式化可用', internals.formatCny(0.4) === '¥0.4000' && internals.formatCny(0) === '¥0')
-
-const emptyLines = internals.costLines({ ok: false, hint: 'x' })
-check('缺数据不伪造金额', emptyLines.ok === false && emptyLines.total === '—')
-
 /* ── 投影路径：会话投影 modelSelection（{lastUsed,next}）驱动状态 ── */
 
 const sel = internals.preview.selectionFromProjection({
@@ -264,9 +259,17 @@ check('Bridge：DeepSeek 投影 → 梁神', deepseekState.character === 'liang'
 
 const runningState = runBridge({
   projection: { lastUsed: null, next: { provider: 'deepseek-official', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' } },
+  summaryRunning: true,
   status: new Map([['s1', { running: true }]]),
 })
-check('Bridge：执行中 → MOSS 工作态', runningState.character === 'moss' && runningState.working === true)
+check('Bridge：两个来源都说在跑 → MOSS 工作态', runningState.character === 'moss' && runningState.working === true)
+
+const staleStatus = runBridge({
+  projection: { lastUsed: null, next: { provider: 'deepseek-official', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' } },
+  summaryRunning: false,
+  status: new Map([['s1', { running: true }]]),
+})
+check('Bridge：状态表卡在 true 但会话已停 → 回到梁神', staleStatus.character === 'liang')
 
 const summaryOnly = runBridge({
   projection: null,

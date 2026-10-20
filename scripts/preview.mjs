@@ -33,6 +33,18 @@ const SAMPLE_COST = {
   peak: { isPeak: false, label: '谷时' },
 }
 
+
+const MOCK_BILI = {
+  ok: true,
+  kind: 'hot',
+  list: [
+    { bvid: 'BV1xx411c7mD', title: '【4K修复】流浪地球2 MOSS 全部出场镜头', pic: '/mock-cover.webp', duration: 486, owner: '影视修复组', views: 1284000 },
+    { bvid: 'BV1yy411c7mE', title: 'DeepSeek 新模型实测：写代码到底行不行', pic: '/mock-cover.webp', duration: 923, owner: '技术宅小林', views: 486000 },
+    { bvid: 'BV1zz411c7mF', title: '一个人做完整产品：从想法到上线', pic: '/mock-cover.webp', duration: 1320, owner: '独立开发者日记', views: 96200 },
+    { bvid: 'BV1aa411c7mG', title: '当 AI 变成同事：多智能体协作实测', pic: '/mock-cover.webp', duration: 640, owner: 'Agent 观察', views: 312000 },
+  ],
+}
+
 const PAGE = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8" />
 <title>dsh-pet-liang · preview</title>
@@ -157,6 +169,16 @@ const server = createServer((req, res) => {
 
   if (path === '/dsh-pet-liang/api/cost') {
     return send(res, 200, 'application/json; charset=utf-8', JSON.stringify(SAMPLE_COST))
+  }
+
+  if (path === '/dsh-pet-liang/api/bili') {
+    return send(res, 200, 'application/json; charset=utf-8', JSON.stringify(MOCK_BILI))
+  }
+
+  if (path === '/dsh-pet-liang/api/bili-img' || path === '/mock-cover.webp') {
+    const cover = join(PLUGIN_DIR, 'assets', 'liang-3.webp')
+    res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' })
+    return createReadStream(cover).pipe(res)
   }
 
   if (path === '/client/client.js') {
