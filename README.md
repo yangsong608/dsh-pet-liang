@@ -70,7 +70,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 | 文件 | 来源 |
 |---|---|
 | `assets/liang-1..4.webp` | 取自 [liang-intensity-calibrator](https://github.com/Lichtspektrum/liang-intensity-calibrator)（MIT，经 dsh-liang-skin 转制）的四个强度锚点 level-01 / level-10 / level-22 / stage-30 |
-| `assets/moss-idle.webp` / `moss-work.webp` | qwen-image-3.0 生成：深色立式量子计算机，正面机械光圈红眼 + 金色环 + 冷蓝指示灯（《流浪地球》里 550W/MOSS 的形态，不是人形机器人）；工作态换成红光亮起 + 三道金环那张 |
+| `assets/moss-idle.webp` / `moss-work.webp` | qwen-image-3.0 生成**无特效的干净机体**（镜头暗、无光晕无光环），rembg 抠成透明底；执行态的红光是 CSS 叠在镜头上，图片两张相同 |
 
 立绘与基座都是"深色底 + 发光主体"，因此在 UI 上都用 alpha 抠出来再叠；没有实拍素材，也不含可识别真人的照片。
 
@@ -85,8 +85,8 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 - 判定结果直接显示在 HUD 右侧的小字（如 `v4.1-flash`）；取不到时显示橙色 `模型未知`。完整判定也写到 `title`（悬停可见）、`data-provider`/`data-tier` 属性与控制台 `[dsh-pet-liang] session=… provider=… model=… effort=… running=… → liang/moss`。
 - 状态桥同时注册在两个座位（`conversation.input.dock` 与 `conversation.session.header.utilities`）互为兜底，任一挂载即可。
 - 单进程、无持久化：拖拽位置与档位不落盘（除了桌宠自己的位置记忆）。
-- 角色以**圆形头像舱（orb）**呈现：原图方形裁进圆内（`clip-path: circle()`），不抠图、不描边，因此没有抠图毛边和背景方块；舱内有暗/亮两套底色跟随主题。
-- 动效全部作用在舱体上：头像呼吸缩放（4.6s / 执行中 1.7s）、舱内旋转扫光（5.2s / 执行中 1.4s）、外圈光晕呼吸、状态点闪烁、换形时闪白 + 溶解。
+- 角色是**真透明抠图**（rembg / BRIA RMBG 模型），没有圆形背景、没有底框：立绘直接浮在界面上，底部有柔和投影与渐隐，不会出现硬边。
+- 图片本身是**干净的**：MOSS 原图只有机体（镜头不发光、没有光晕和光环），所有效果都由 CSS 叠加——光环呼吸、地面投影、立绘浮动、MOSS 执行时的红色镜头发光、换形闪白+溶解。
 - 点桌宠唤起 dsh-bili-widget 后，会自动把它的浮窗拖到桌宠左侧；它自带的粉色悬浮球已隐藏（仍作为唤起锚点）。
 
 ## 结构
