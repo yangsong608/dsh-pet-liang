@@ -95,15 +95,109 @@ export function createMoss3D(canvas, opts) {
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 关于关节 ─────────────────────────────────────
-       结论（已用几何数据与多轮实拍验证）：
-       这个 FBX 是一整块连续外壳 —— 52 个连通块之间没有任何 y 方向断档，
-       顶部横梁/头部/手臂焊死在同一张面上。
-       因此只要分段转动，接缝处必然滑开（手块脱离前臂、机身脱离手块）。
-       在拿到「分件/带骨骼」的模型之前，不做关节动画，保证模型永远完整。 */
-    armTop = null
-    armMid = null
-    armWrist = null
+    /* ── 三个关节（轴向由用户确认）──────────────────────
+       J1 颈部：垂直轴 → 左右偏航，带整条手臂
+       J2 肘部：垂直轴 → 左右偏航，带前臂+手块+机身
+       J3 手腕：水平轴 → 前后点头，只带机身
+       分段按网格零件 y 分布：>79.9 固定 / 60.6~79.9 上臂 / 25~60.6 前臂+手块 / <25 手块余部
+       枢轴用拟合圆圆心，不用截面质心。 */
+    {
+      const arm = obj.getObjectByName('Moss_arm')
+      if (arm) {
+        const geo = arm.geometry
+        const posAttr = geo.attributes.position
+        const norAttr = geo.attributes.normal
+        const uvAttr = geo.attributes.uv
+        const total = posAttr.count
+        const M = arm.matrix.clone()
+        const parent = arm.parent
+        const weld = new Map()
+        const wid = new Int32Array(total)
+        for (let i = 0; i < total; i += 1) {
+          const k = posAttr.getX(i).toFixed(2) + ',' + posAttr.getY(i).toFixed(2) + ',' + posAttr.getZ(i).toFixed(2)
+          let id = weld.get(k)
+          if (id === undefined) { id = weld.size; weld.set(k, id) }
+          wid[i] = id
+        }
+        const par = new Int32Array(weld.size)
+        for (let i = 0; i < par.length; i += 1) par[i] = i
+        const find = (x) => { let r = x; while (par[r] !== r) r = par[r]; while (par[x] !== r) { const n = par[x]; par[x] = r; x = n } return r }
+        const join = (a, b) => { const ra = find(a); const rb = find(b); if (ra !== rb) par[ra] = rb }
+        for (let i = 0; i < total; i += 3) { join(wid[i], wid[i + 1]); join(wid[i], wid[i + 2]) }
+        const tmp = new THREE.Vector3()
+        const compY = new Map()
+        for (let i = 0; i < total; i += 1) {
+          const r = find(wid[i])
+          tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
+          const rec = compY.get(r)
+          if (!rec) compY.set(r, { y0: tmp.y, y1: tmp.y })
+          else { rec.y0 = Math.min(rec.y0, tmp.y); rec.y1 = Math.max(rec.y1, tmp.y) }
+        }
+        const bucketOf = new Map()
+        compY.forEach((rec, r) => {
+          const mid = (rec.y0 + rec.y1) / 2
+          bucketOf.set(r, mid > 79.9 ? 0 : mid > 60.6 ? 1 : mid > 25.0 ? 2 : 3)
+        })
+        const buckets = [[], [], [], []]
+        for (let i = 0; i < total; i += 3) buckets[bucketOf.get(find(wid[i]))].push(i)
+        const buildSub = (tris) => {
+          const cnt = tris.length * 3
+          const p2 = new Float32Array(cnt * 3)
+          const n2 = new Float32Array(cnt * 3)
+          const u2 = uvAttr ? new Float32Array(cnt * 2) : null
+          let w = 0
+          for (const st of tris) {
+            for (let k = 0; k < 3; k += 1) {
+              const idx = st + k
+              p2[w * 3] = posAttr.getX(idx); p2[w * 3 + 1] = posAttr.getY(idx); p2[w * 3 + 2] = posAttr.getZ(idx)
+              if (norAttr) { n2[w * 3] = norAttr.getX(idx); n2[w * 3 + 1] = norAttr.getY(idx); n2[w * 3 + 2] = norAttr.getZ(idx) }
+              if (u2) { u2[w * 2] = uvAttr.getX(idx); u2[w * 2 + 1] = uvAttr.getY(idx) }
+              w += 1
+            }
+          }
+          const g2 = new THREE.BufferGeometry()
+          g2.setAttribute('position', new THREE.BufferAttribute(p2, 3))
+          if (norAttr) g2.setAttribute('normal', new THREE.BufferAttribute(n2, 3))
+          if (u2) g2.setAttribute('uv', new THREE.BufferAttribute(u2, 2))
+          g2.computeBoundingSphere()
+          return g2
+        }
+        const makePart = (tris) => {
+          const m = new THREE.Mesh(buildSub(tris), arm.material)
+          m.frustumCulled = false
+          m.matrixAutoUpdate = false
+          m.matrix.copy(arm.matrix)
+          parent.add(m)
+          m.updateMatrixWorld(true)
+          return m
+        }
+        const headMesh = makePart(buckets[0])
+        const upperMesh = makePart(buckets[1])
+        const foreMesh = makePart(buckets[2])
+        const handMesh = makePart(buckets[3])
+        const P1 = new THREE.Vector3(-0.37, 79.9, 18.04)
+        const P2 = new THREE.Vector3(32.92, 60.6, 18.04)
+        const hb = new THREE.Box3().setFromObject(handMesh)
+        const bodyMesh0 = obj.getObjectByName('Moss_Main')
+        const bb0 = bodyMesh0 ? new THREE.Box3().setFromObject(bodyMesh0) : hb
+        const hc = hb.getCenter(new THREE.Vector3())
+        const P3 = new THREE.Vector3((hb.min.x + bb0.max.x) / 2, hc.y, hc.z)
+        const p1 = new THREE.Group(); p1.position.copy(P1); parent.add(p1); parent.updateMatrixWorld(true)
+        p1.attach(upperMesh)
+        const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
+        p2.attach(foreMesh)
+        p2.attach(handMesh)
+        const p3 = new THREE.Group(); p3.position.copy(P3); parent.add(p3); parent.updateMatrixWorld(true)
+        ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
+          const part = obj.getObjectByName(nm)
+          if (part) p3.attach(part)
+        })
+        arm.visible = false
+        armTop = p1
+        armMid = p2
+        armWrist = p3
+      }
+    }
 
     /* 红眼：模型自带发光贴图只有 3 个 LED 点，主镜头没做发光，这里补一层 */
     const mainMesh = obj.getObjectByName('Moss_Main')
@@ -186,7 +280,30 @@ export function createMoss3D(canvas, opts) {
     const t = (performance.now() - t0) / 1000
     const speed = working ? 2.6 : 1
     /* 整机轻微悬浮：所有零件刚性同步，不可能分离 */
-    if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 1.1
+    /* J1/J2 左右偏航，J3 前后点头 */
+    {
+      const POSES = [
+        { a1: 0, a2: 0, a3: 0 },
+        { a1: 6, a2: -3, a3: 10 },
+        { a1: -5, a2: 3, a3: -9 },
+        { a1: 3, a2: -2, a3: 5 },
+        { a1: 0, a2: 0, a3: 0 },
+      ]
+      const SEG = working ? 1.1 : 1.7
+      const amp = working ? 1.3 : 1
+      const loopLen = SEG * (POSES.length - 1)
+      const lt = (t * speed) % loopLen
+      const idx = Math.min(POSES.length - 2, Math.floor(lt / SEG))
+      const frac = (lt - idx * SEG) / SEG
+      const ease = frac * frac * (3 - 2 * frac)
+      const from = POSES[idx]
+      const to = POSES[idx + 1]
+      const ang = (k) => ((from[k] + (to[k] - from[k]) * ease) * amp) * Math.PI / 180
+      if (armTop) armTop.rotation.y = ang('a1')
+      if (armMid) armMid.rotation.y = ang('a2')
+      if (armWrist) armWrist.rotation.x = ang('a3')
+    }
+    if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 0.8
     renderer.render(scene, camera)
     if (!healthChecked) {
       healthChecked = true
