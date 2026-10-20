@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '93'
+    var ASSET_V = '94'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -151,7 +151,7 @@ window.__ModuleLoader__.load({
             asset: working ? 'moss-work.webp' : 'moss-base.webp',
             title: 'MOSS',
             subtitle: working ? '执行中' : '空闲',
-            aura: '#5ee7ff',
+            aura: working ? '#ff7a6a' : '#5ee7ff',
             glow: working ? 0.8 : 0.4,
             provider: '',
             model: '',
@@ -196,7 +196,7 @@ window.__ModuleLoader__.load({
         decision.asset = 'moss-work.webp'
         decision.title = 'MOSS'
         decision.subtitle = '执行中'
-        decision.aura = '#5ee7ff'
+        decision.aura = '#ff7a6a'   /* 执行态：浅红光晕 */
         decision.glow = 0.85
         decision.working = true
         return decision
