@@ -13,8 +13,22 @@ export function createMoss3D(canvas, opts) {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, powerPreference: 'low-power' })
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.15
 
   const scene = new THREE.Scene()
+  /* 环境反射：金属件没有环境贴图会发平、看着不像 3D */
+  try {
+    const env = new THREE.PMREMGenerator(renderer)
+    const room = new THREE.Scene()
+    const geo = new THREE.BoxGeometry(1, 1, 1)
+    const mat = new THREE.MeshBasicMaterial({ color: 0x8899aa, side: THREE.BackSide })
+    room.add(new THREE.Mesh(geo, mat))
+    const light = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ color: 0xffffff }))
+    light.position.set(0, 2, 0); light.rotation.x = -Math.PI / 2
+    room.add(light)
+    scene.environment = env.fromScene(room, 0.04).texture
+  } catch (e) { /* 环境贴图失败不影响主渲染 */ }
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 4000)
   scene.add(new THREE.HemisphereLight(0xffffff, 0x24303d, 1.7))
   const key = new THREE.DirectionalLight(0xffffff, 2.5); key.position.set(50, 80, 90); scene.add(key)
@@ -39,6 +53,7 @@ export function createMoss3D(canvas, opts) {
   let t0 = performance.now()
   let active = true
   let healthChecked = false
+  let baseY = 0
   let last = 0
 
   function resize() {
@@ -75,140 +90,20 @@ export function createMoss3D(canvas, opts) {
     const center = box.getCenter(new THREE.Vector3())
     const size = box.getSize(new THREE.Vector3())
     obj.position.sub(center)
-    const baseY = obj.position.y
+    baseY = obj.position.y
     scene.add(obj)
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 关节（轴心来自拟合圆）─────────────────────────────
-       在每个关节高度取截面、迭代拟合圆，得到真实的转轴位置：
-         J1 颈部 y=79.9 轴心 (x=-0.37, z=18.04) r≈5.94
-         J2 肘   y=60.6 轴心 (x=32.92, z=18.04) r≈6.55
-         J3 腕   y=25.0 轴心 (x=35.25, z=18.02) r≈6.64
-       三轴都是垂直 Y 轴。机身螺栓固定在手上 → 归 J3 段，随手腕一起动。 */
-    {
-      const arm = obj.getObjectByName('Moss_arm')
-      const JOINTS = [
-        { y: 79.9, x: -0.37, z: 18.04 },
-        { y: 60.6, x: 32.92, z: 18.04 },
-        { y: 25.0, x: 35.25, z: 18.02 },
-      ]
-      if (arm) {
-        const geo = arm.geometry
-        const posAttr = geo.attributes.position
-        const norAttr = geo.attributes.normal
-        const uvAttr = geo.attributes.uv
-        const total = posAttr.count
-        const M = arm.matrix.clone()
-        const parent = arm.parent
-
-        /* 焊接 + 连通块，按块中心 y 分段 */
-        const weld = new Map()
-        const wid = new Int32Array(total)
-        for (let i = 0; i < total; i += 1) {
-          const k = posAttr.getX(i).toFixed(2) + ',' + posAttr.getY(i).toFixed(2) + ',' + posAttr.getZ(i).toFixed(2)
-          let id = weld.get(k)
-          if (id === undefined) { id = weld.size; weld.set(k, id) }
-          wid[i] = id
-        }
-        const par = new Int32Array(weld.size)
-        for (let i = 0; i < par.length; i += 1) par[i] = i
-        const find = (x) => { let r = x; while (par[r] !== r) r = par[r]; while (par[x] !== r) { const n = par[x]; par[x] = r; x = n } return r }
-        const join = (a, b) => { const ra = find(a); const rb = find(b); if (ra !== rb) par[ra] = rb }
-        for (let i = 0; i < total; i += 3) { join(wid[i], wid[i + 1]); join(wid[i], wid[i + 2]) }
-
-        const tmp = new THREE.Vector3()
-        const compY = new Map()
-        for (let i = 0; i < total; i += 1) {
-          const r = find(wid[i])
-          tmp.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(M)
-          const rec = compY.get(r)
-          if (!rec) compY.set(r, { y0: tmp.y, y1: tmp.y })
-          else { rec.y0 = Math.min(rec.y0, tmp.y); rec.y1 = Math.max(rec.y1, tmp.y) }
-        }
-        const bucketOf = new Map()
-        compY.forEach((rec, r) => {
-          const mid = (rec.y0 + rec.y1) / 2
-          bucketOf.set(r, mid > JOINTS[0].y ? 0 : mid > JOINTS[1].y ? 1 : mid > JOINTS[2].y ? 2 : 3)
-        })
-        const buckets = [[], [], [], []]
-        for (let i = 0; i < total; i += 3) buckets[bucketOf.get(find(wid[i]))].push(i)
-
-        const buildSub = (triStarts) => {
-          const count = triStarts.length * 3
-          const p2 = new Float32Array(count * 3)
-          const n2 = new Float32Array(count * 3)
-          const u2 = uvAttr ? new Float32Array(count * 2) : null
-          let w = 0
-          for (const start of triStarts) {
-            for (let k = 0; k < 3; k += 1) {
-              const idx = start + k
-              p2[w * 3] = posAttr.getX(idx); p2[w * 3 + 1] = posAttr.getY(idx); p2[w * 3 + 2] = posAttr.getZ(idx)
-              if (norAttr) { n2[w * 3] = norAttr.getX(idx); n2[w * 3 + 1] = norAttr.getY(idx); n2[w * 3 + 2] = norAttr.getZ(idx) }
-              if (u2) { u2[w * 2] = uvAttr.getX(idx); u2[w * 2 + 1] = uvAttr.getY(idx) }
-              w += 1
-            }
-          }
-          const g2 = new THREE.BufferGeometry()
-          g2.setAttribute('position', new THREE.BufferAttribute(p2, 3))
-          if (norAttr) g2.setAttribute('normal', new THREE.BufferAttribute(n2, 3))
-          if (u2) g2.setAttribute('uv', new THREE.BufferAttribute(u2, 2))
-          g2.computeBoundingSphere()
-          return g2
-        }
-
-        const makePart = (triStarts) => {
-          const m = new THREE.Mesh(buildSub(triStarts), arm.material)
-          m.frustumCulled = false
-          m.matrixAutoUpdate = false
-          m.matrix.copy(arm.matrix)
-          parent.add(m)
-          m.updateMatrixWorld(true)
-          return m
-        }
-
-        const headMesh = makePart(buckets[0])
-        const upperMesh = makePart(buckets[1])
-        const foreMesh = makePart(buckets[2])
-        const handMesh = makePart(buckets[3])
-
-        /* 枢轴 = 真实轴心，不是截面质心 */
-        const P = JOINTS.map((j) => new THREE.Vector3(j.x, j.y, j.z))
-        const p1 = new THREE.Group(); p1.position.copy(P[0]); parent.add(p1); parent.updateMatrixWorld(true)
-        p1.attach(upperMesh)
-        const p2 = new THREE.Group(); p2.position.copy(P[1]).sub(P[0]); p1.add(p2); p1.updateMatrixWorld(true)
-        p2.attach(foreMesh)
-        /* 手块与前臂是同一段（参考图里 J3 在「手块↔机身」之间，不是「前臂↔手块」） */
-        p2.attach(handMesh)
-
-        /* J3：只有机身绕它转，轴心取机身与手块的接合处 */
-        const bodyMesh = obj.getObjectByName('Moss_Main')
-        let j3 = new THREE.Vector3(20, 8, 18)
-        if (bodyMesh) {
-          const bb = new THREE.Box3().setFromObject(bodyMesh)
-          j3.set(bb.max.x - 2, (bb.min.y + bb.max.y) / 2 + (bb.max.y - bb.min.y) * 0.12, bb.getCenter(new THREE.Vector3()).z)
-        }
-        const p3 = new THREE.Group(); p3.position.copy(j3); parent.add(p3); parent.updateMatrixWorld(true)
-        ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
-          const part = obj.getObjectByName(nm)
-          if (part) p3.attach(part)
-        })
-
-        arm.visible = false
-        if (typeof console !== 'undefined') {
-          obj.updateMatrixWorld(true)
-          const bb = new THREE.Box3().setFromObject(obj)
-          let vis = 0
-          obj.traverse((n) => { if (n.isMesh && n.visible) vis += 1 })
-          window.__diag__ = 'meshes=' + vis + ' bbox y ' + bb.min.y.toFixed(1) + '..' + bb.max.y.toFixed(1) +
-            ' x ' + bb.min.x.toFixed(1) + '..' + bb.max.x.toFixed(1) +
-            ' cam ' + camera.position.x.toFixed(1) + ',' + camera.position.y.toFixed(1) + ',' + camera.position.z.toFixed(1)
-        }
-        armTop = p1
-        armMid = p2
-        armWrist = p3
-      }
-    }
+    /* ── 关于关节 ─────────────────────────────────────
+       结论（已用几何数据与多轮实拍验证）：
+       这个 FBX 是一整块连续外壳 —— 52 个连通块之间没有任何 y 方向断档，
+       顶部横梁/头部/手臂焊死在同一张面上。
+       因此只要分段转动，接缝处必然滑开（手块脱离前臂、机身脱离手块）。
+       在拿到「分件/带骨骼」的模型之前，不做关节动画，保证模型永远完整。 */
+    armTop = null
+    armMid = null
+    armWrist = null
 
     /* 红眼：模型自带发光贴图只有 3 个 LED 点，主镜头没做发光，这里补一层 */
     const mainMesh = obj.getObjectByName('Moss_Main')
@@ -290,30 +185,8 @@ export function createMoss3D(canvas, opts) {
     last = now || 0
     const t = (performance.now() - t0) / 1000
     const speed = working ? 2.6 : 1
-    /* 三个关节：按关键帧走具体角度（单位：度）
-         J1/J2 绕垂直 Y 轴偏航，J3 绕朝向镜头的 Z 轴摆。
-         序列：静止 → 右偏 → 左偏 → 回中 → 静止，每段 1.6s，平滑缓动。 */
-      /* 三个关节都绕垂直 Y 轴（与分段处的水平切口垂直，转动不撕开） */
-      const POSES = [
-        { a1: 0, a2: 0, a3: 0 },
-        { a1: 21, a2: -11, a3: 8 },
-        { a1: -18, a2: 11, a3: -8 },
-        { a1: 9, a2: -4, a3: 3 },
-        { a1: 0, a2: 0, a3: 0 },
-      ]
-      const SEG = working ? 1.0 : 1.6
-      const amp = working ? 1.25 : 1
-      const total = SEG * (POSES.length - 1)
-      const lt = (t * speed) % total
-      const i = Math.min(POSES.length - 2, Math.floor(lt / SEG))
-      const f = (lt - i * SEG) / SEG
-      const e = f * f * (3 - 2 * f) /* smoothstep */
-      const from = POSES[i]
-      const to = POSES[i + 1]
-      const ang = (k) => ((from[k] + (to[k] - from[k]) * e) * amp) * Math.PI / 180
-      if (armTop) armTop.rotation.y = ang('a1')
-      if (armMid) armMid.rotation.y = ang('a2')
-      if (armWrist) armWrist.rotation.x = ang('a3') * 0.6
+    /* 整机轻微悬浮：所有零件刚性同步，不可能分离 */
+    if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 1.1
     renderer.render(scene, camera)
     if (!healthChecked) {
       healthChecked = true
