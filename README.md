@@ -167,7 +167,7 @@ MOSS 形象不再用预渲染 PNG，而是**在插件里实时渲染你提供的
   - 实现：`assets3d/boot.js` 的 `aim(yawDeg, pitchDeg)`；`client/client.js` 的 `bindAim()`
   - 截图：`screenshots/25-right-drag-aim.png`、`screenshots/27-orbit-360.png`
 
-- **取景**：先按真实关节组合（J1/J2 偏航 −180~180 × J3 俯仰 ±45，步长 20°/15°）对整机点云采样，得到可达姿态的包围范围 maxH/maxV；再分别求水平/垂直所需距离取大者（`distH = maxH/tan(halfH)`、`distV = maxV/tan(halfV)`，×1.10 余量）。相机在 `resize()` 与画布尺寸变化时都会重新取景。
+- **取景**：先按真实关节组合（J1/J2 偏航 −180~180 × J3 俯仰 ±45，步长 20°/15°）对整机点云采样，得到可达姿态的包围范围 maxH/maxV；再分别求水平/垂直所需距离取大者（`distH = maxH/tan(halfH)`、`distV = maxV/tan(halfV)`，×1.10 余量）。相机在 `resize()` 与画布尺寸变化时都会重新取景。取景预留的转动范围可用 `frameYaw`/`framePitch` 指定（桌宠默认 ±180/±45；启动页传 14/34，因为它只做小幅动作）。
 - **3D 画布**直接挂在 `.stage` 下（280×330），不再放在 `.figwrap`（那里会被立绘尺寸约束成 246×262）。
 - **相机**：必须用 3/4 视角（方位角 26°）。正对时绕垂直轴的偏航是「往屏幕里外摆」，肉眼几乎看不出；3/4 下才明显。
 - **缓存**：`boot.js` 的请求带 `?v=`，宿主对 `.js` 返回 `no-cache`——之前没带版本，桌面端可能一直执行旧缓存。

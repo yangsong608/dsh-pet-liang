@@ -66,6 +66,9 @@ export function createMoss3D(canvas, opts) {
   let baseY = 0
   const jointsDisabled = !!(opts && opts.joints === false)
   const motionAmp = (opts && typeof opts.motionAmp === 'number') ? opts.motionAmp : 1
+  /* 取景预留的转动范围：桌宠可拖动/全周扫描 → ±180/±45；启动页只小幅动作 → 传小值 */
+  const frameYaw = (opts && typeof opts.frameYaw === 'number') ? Math.abs(opts.frameYaw) : 180
+  const framePitch = (opts && typeof opts.framePitch === 'number') ? Math.abs(opts.framePitch) : 45
   let last = 0
 
   let refit = null   /* 模型加载后由 fitCamera 赋值 */
@@ -320,8 +323,10 @@ export function createMoss3D(canvas, opts) {
       const o3 = new THREE.Object3D(); o3.position.copy(P3).sub(P2); o2.add(o3)
       o1.updateMatrixWorld(true)
       const pv = new THREE.Vector3()
-      for (let yaw = -180; yaw <= 180; yaw += 20) {
-        for (let pitch = -45; pitch <= 45; pitch += 15) {
+      const yawStep = Math.max(4, frameYaw / 9)
+      const pitchStep = Math.max(3, framePitch / 5)
+      for (let yaw = -frameYaw; yaw <= frameYaw; yaw += yawStep) {
+        for (let pitch = -framePitch; pitch <= framePitch; pitch += pitchStep) {
           o1.rotation.set(0, (yaw * 0.5 * Math.PI) / 180, 0)
           o2.rotation.set(0, (yaw * 0.5 * Math.PI) / 180, 0)
           o3.rotation.set((pitch * Math.PI) / 180, 0, 0)
