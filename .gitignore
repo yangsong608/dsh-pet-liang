@@ -1,3 +1,7 @@
 node_modules/
 .DS_Store
 *.log
+
+# 第三方原始素材（本地保留，不入库：体积大且版权归《流浪地球2》版权方）
+the-wandering-earth-moss-550w/
+流浪地球2 数字生命卡 Digital Life Card sci-fi Card/
