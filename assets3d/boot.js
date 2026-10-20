@@ -187,7 +187,8 @@ export function createMoss3D(canvas, opts) {
         const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
         p2.attach(foreMesh)
         p2.attach(handMesh)
-        const p3 = new THREE.Group(); p3.position.copy(P3); parent.add(p3); parent.updateMatrixWorld(true)
+        /* 机身的枢轴必须挂在 J2 下：手臂摆动时机身才会跟着走 */
+        const p3 = new THREE.Group(); p3.position.copy(P3).sub(P2); p2.add(p3); p2.updateMatrixWorld(true)
         ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
           const part = obj.getObjectByName(nm)
           if (part) p3.attach(part)
