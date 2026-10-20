@@ -343,25 +343,26 @@ export function createMoss3D(canvas, opts) {
     ]
 
     const WORK = [
-      /* 1 扫视巡检：左右大范围巡视，转向瞬间眼亮 */
-      { name: '扫视巡检', dur: 20, keys: [
+      /* 1 全周扫描：颈部+中臂各转半圈，合计整机转满 360°，中途三次停顿 */
+      { name: '全周扫描', dur: 20, keys: [
         { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.70 },
-        { t: 3.5, a1: -20, a2: 9, a3: -3, eye: 1.00 },
-        { t: 6.5, a1: -20, a2: 9, a3: -3, eye: 0.60 },
-        { t: 10, a1: 20, a2: -9, a3: 4, eye: 1.00 },
-        { t: 13.5, a1: 20, a2: -9, a3: 4, eye: 0.60 },
-        { t: 16.5, a1: 6, a2: -3, a3: 1, eye: 0.85 },
-        { t: 20, a1: 0, a2: 0, a3: 0, eye: 0.70 },
+        { t: 4, a1: 90, a2: 90, a3: 3, eye: 1.00 },
+        { t: 6, a1: 90, a2: 90, a3: 3, eye: 0.62 },
+        { t: 9.5, a1: 180, a2: 180, a3: -3, eye: 1.05 },
+        { t: 11.5, a1: 180, a2: 180, a3: -3, eye: 0.62 },
+        { t: 15, a1: 260, a2: 260, a3: 4, eye: 1.00 },
+        { t: 17.5, a1: 300, a2: 300, a3: 2, eye: 0.80 },
+        { t: 20, a1: 360, a2: 360, a3: 0, eye: 0.70 },
       ] },
       /* 2 点头确认：三次点头，每次闪一下 */
       { name: '点头确认', dur: 20, keys: [
         { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.70 },
-        { t: 2, a1: 0, a2: 0, a3: 10, eye: 1.05 },
-        { t: 3, a1: 0, a2: 0, a3: -3, eye: 0.50 },
-        { t: 5, a1: 0, a2: 0, a3: 10, eye: 1.05 },
-        { t: 6, a1: 0, a2: 0, a3: -3, eye: 0.50 },
-        { t: 8, a1: 0, a2: 0, a3: 10, eye: 1.05 },
-        { t: 9.2, a1: 0, a2: 0, a3: -3, eye: 0.50 },
+        { t: 2, a1: 0, a2: 0, a3: 25, eye: 1.05 },
+        { t: 3, a1: 0, a2: 0, a3: -8, eye: 0.50 },
+        { t: 5, a1: 0, a2: 0, a3: 25, eye: 1.05 },
+        { t: 6, a1: 0, a2: 0, a3: -8, eye: 0.50 },
+        { t: 8, a1: 0, a2: 0, a3: 25, eye: 1.05 },
+        { t: 9.2, a1: 0, a2: 0, a3: -8, eye: 0.50 },
         { t: 13, a1: 7, a2: -3, a3: 3, eye: 0.85 },
         { t: 17, a1: -4, a2: 2, a3: -1, eye: 0.75 },
         { t: 20, a1: 0, a2: 0, a3: 0, eye: 0.70 },
@@ -393,10 +394,10 @@ export function createMoss3D(canvas, opts) {
       /* 5 抬头检查：抬起来看，停住，再放回 */
       { name: '抬头检查', dur: 20, keys: [
         { t: 0, a1: 0, a2: 0, a3: 0, eye: 0.70 },
-        { t: 3, a1: 4, a2: -2, a3: 12, eye: 1.00 },
-        { t: 8, a1: 4, a2: -2, a3: 12, eye: 0.62 },
-        { t: 11, a1: -6, a2: 3, a3: -8, eye: 0.95 },
-        { t: 15, a1: -6, a2: 3, a3: -8, eye: 0.60 },
+        { t: 3, a1: 4, a2: -2, a3: 40, eye: 1.00 },
+        { t: 8, a1: 4, a2: -2, a3: 40, eye: 0.62 },
+        { t: 11, a1: -6, a2: 3, a3: -38, eye: 0.95 },
+        { t: 15, a1: -6, a2: 3, a3: -38, eye: 0.60 },
         { t: 20, a1: 0, a2: 0, a3: 0, eye: 0.70 },
       ] },
       /* 6 深度思考：慢慢漂，长时间停住，眼缓慢起伏 */
@@ -505,8 +506,8 @@ export function createMoss3D(canvas, opts) {
     }
     if (aimBlend > 0.001) {
       const w = aimBlend
-      deg1 = deg1 * (1 - w) + (aimCur.yaw * 0.6) * w
-      deg2 = deg2 * (1 - w) + (aimCur.yaw * 0.4) * w
+      deg1 = deg1 * (1 - w) + (aimCur.yaw * 0.5) * w
+      deg2 = deg2 * (1 - w) + (aimCur.yaw * 0.5) * w
       deg3 = deg3 * (1 - w) + aimCur.pitch * w
     }
 
@@ -542,12 +543,11 @@ export function createMoss3D(canvas, opts) {
   }
 
   return {
-    /** 拖动瞄准：nx/ny ∈ [-1,1]；传 null 释放 */
-    aim(nx, ny) {
-      if (nx === null || nx === undefined) { aimTarget = null; return }
-      const mx = Math.max(-1, Math.min(1, nx))
-      const my = Math.max(-1, Math.min(1, ny))
-      aimTarget = { yaw: mx * 34, pitch: -my * 16 }
+    /** 拖动瞄准：直接传角度（偏航不限、俯仰限 ±45°）；传 null 释放 */
+    aim(yawDeg, pitchDeg) {
+      if (yawDeg === null || yawDeg === undefined) { aimTarget = null; return }
+      const p = Math.max(-45, Math.min(45, Number(pitchDeg) || 0))
+      aimTarget = { yaw: Number(yawDeg) || 0, pitch: p }
     },
     setWorking(v) { working = !!v },
     setActive(v) {

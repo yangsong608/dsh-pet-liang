@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '76'
+    var ASSET_V = '77'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -465,15 +465,25 @@ window.__ModuleLoader__.load({
     function bindAim(root) {
       var aiming = false
       var pointerId = null
+      var lastYaw = 0
 
       function apply(clientX, clientY) {
         if (!moss3d || !moss3d.aim) return
         var rect = root.getBoundingClientRect()
         var cx = rect.left + rect.width / 2
         var cy = rect.top + rect.height / 2
-        /* 以宠物对角线的一半为参考半径，超出就到最大角度 */
-        var r = Math.max(60, Math.min(rect.width, rect.height))
-        moss3d.aim((clientX - cx) / r, (clientY - cy) / r)
+        var dx = clientX - cx
+        var dy = clientY - cy
+        var dist = Math.sqrt(dx * dx + dy * dy)
+        /* 偏航 360°：指针相对中心的方位角（0=上，顺时针为正），中心附近保持上一次角度 */
+        if (dist > 8) {
+          var yaw = Math.atan2(dx, -dy) * 180 / Math.PI
+          lastYaw = yaw
+        }
+        /* 俯仰 ±45°：以宠物短边一半为参考，超出即到极限 */
+        var r = Math.max(60, Math.min(rect.width, rect.height) * 0.5)
+        var pitch = Math.max(-45, Math.min(45, (-dy / r) * 45))
+        moss3d.aim(lastYaw, pitch)
       }
 
       root.addEventListener('contextmenu', function (event) {
