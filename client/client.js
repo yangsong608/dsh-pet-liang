@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '46'
+    var ASSET_V = '49'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -846,8 +846,12 @@ window.__ModuleLoader__.load({
       catSel.addEventListener('change', function (event) {
         event.stopPropagation()
         biliRid = Number(catSel.value) || 0
+        biliQuery = ''
+        input.value = ''
         biliList = null
         biliPage = 1
+        biliMode = 'list'
+        biliCurrent = null
         renderBili()
         void loadBili()
       })
@@ -900,6 +904,9 @@ window.__ModuleLoader__.load({
       /* 拖动 */
       head.addEventListener('pointerdown', function (event) {
         if (event.button !== 0) return
+        /* 标题栏里的输入框 / 下拉 / 按钮不能被拖拽吞掉点击 */
+        var t = event.target
+        if (t && t.closest && t.closest('input, select, textarea, button')) return
         var rect = win.getBoundingClientRect()
         bwDrag = { mode: 'move', sx: event.clientX, sy: event.clientY, x: rect.left, y: rect.top, w: rect.width, h: rect.height }
         win.classList.add('bw-dragging')
@@ -972,7 +979,6 @@ window.__ModuleLoader__.load({
       var keyword = String(raw || '').trim()
       if (!keyword) return
       biliQuery = keyword.slice(0, 60)
-      biliKind = 'hot'
       biliList = null
       biliError = ''
       biliMode = 'list'
