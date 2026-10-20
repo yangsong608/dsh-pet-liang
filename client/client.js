@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '43'
+    var ASSET_V = '44'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -337,6 +337,7 @@ window.__ModuleLoader__.load({
     var biliKind = 'new'
     var biliQuery = ''
     var biliPage = 1
+    var biliRid = 0
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -649,6 +650,7 @@ window.__ModuleLoader__.load({
     var biliKind = 'new'
     var biliQuery = ''
     var biliPage = 1
+    var biliRid = 0
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -669,8 +671,15 @@ window.__ModuleLoader__.load({
         '#' + BW_ID + '.bw-dragging .bw-head{cursor:grabbing;}',
         '#' + BW_ID + ' .bw-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;',
         'color:var(--dpl-aura,#7f8ea3);}',
-        '#' + BW_ID + ' .bw-search{flex:1;min-width:0;display:flex;gap:5px;}',
-        '#' + BW_ID + ' .bw-input{flex:1;min-width:0;border:none;border-radius:7px;padding:4px 8px;font-size:11px;',
+        '#' + BW_ID + ' .bw-head{flex-direction:column;align-items:stretch;gap:6px;padding:8px 10px 7px;height:auto;}',
+        '#' + BW_ID + ' .bw-head-top{display:flex;align-items:center;gap:6px;}',
+        '#' + BW_ID + ' .bw-tools{display:flex;align-items:center;gap:5px;margin-left:auto;}',
+        '#' + BW_ID + ' .bw-search{display:flex;gap:6px;}',
+        '#' + BW_ID + ' .bw-channels{display:flex;align-items:center;gap:5px;}',
+        '#' + BW_ID + ' .bw-cat{font:inherit;font-size:10.5px;padding:3px 5px;border-radius:6px;color:#e8edf5;',
+        'background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);outline:none;cursor:pointer;}',
+        '#' + BW_ID + ' .bw-cat option{background:#131820;color:#e8edf5;}',
+        '#' + BW_ID + ' .bw-input{flex:1;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 10px;font-size:12px;',
         'outline:none;background:rgba(255,255,255,.08);color:#e8edf5;}',
         '#' + BW_ID + ' .bw-input::placeholder{color:rgba(232,237,245,.38);}',
         '#' + BW_ID + ' .bw-go,#' + BW_ID + ' .bw-refresh,#' + BW_ID + ' .bw-clear{font:inherit;font-size:10.5px;padding:3px 7px;',
@@ -768,7 +777,9 @@ window.__ModuleLoader__.load({
       win.hidden = true
 
       var head = el('div', 'bw-head')
-      head.appendChild(el('span', 'bw-title', 'Bilibili'))
+      var headTop = el('div', 'bw-head-top')
+      headTop.appendChild(el('span', 'bw-title', 'Bilibili'))
+      var headTools = el('div', 'bw-tools')
 
       var searchWrap = el('div', 'bw-search')
       var input = document.createElement('input')
@@ -790,7 +801,7 @@ window.__ModuleLoader__.load({
       })
       searchWrap.appendChild(input)
       searchWrap.appendChild(go)
-      head.appendChild(searchWrap)
+      head.appendChild(headTop)
 
       var refresh = el('button', 'bw-refresh', '↻')
       refresh.type = 'button'
@@ -807,7 +818,7 @@ window.__ModuleLoader__.load({
         renderBili()
         void loadBili()
       })
-      head.appendChild(refresh)
+      headTools.appendChild(refresh)
 
       var close = el('button', 'bw-close', '×')
       close.type = 'button'
@@ -815,7 +826,29 @@ window.__ModuleLoader__.load({
         event.stopPropagation()
         closeBili()
       })
-      head.appendChild(close)
+      headTools.appendChild(close)
+      headTop.appendChild(headTools)
+      head.appendChild(searchWrap)
+
+      var channelRow = el('div', 'bw-channels')
+      var cats = [['0','全站'],['1','动画'],['3','音乐'],['4','游戏'],['5','娱乐'],['36','知识'],['188','科技'],['181','影视'],['119','鬼畜'],['160','生活'],['211','美食']]
+      var catSel = document.createElement('select')
+      catSel.className = 'bw-cat'
+      cats.forEach(function (pair) {
+        var opt = document.createElement('option')
+        opt.value = pair[0]
+        opt.textContent = pair[1]
+        catSel.appendChild(opt)
+      })
+      catSel.addEventListener('change', function (event) {
+        event.stopPropagation()
+        biliRid = Number(catSel.value) || 0
+        biliList = null
+        biliPage = 1
+        renderBili()
+        void loadBili()
+      })
+      channelRow.appendChild(catSel)
 
       var tabs = el('div', 'bw-tabs')
       ;[['new', '最新'], ['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
@@ -847,7 +880,8 @@ window.__ModuleLoader__.load({
         void loadBili()
       })
       tabs.appendChild(clear)
-      head.appendChild(tabs)
+      channelRow.appendChild(tabs)
+      head.appendChild(channelRow)
 
       var body = el('div', 'bw-body')
       var foot = el('div', 'bw-foot', '拖动标题栏移动 · 右下角缩放 · Esc 关闭')
@@ -1023,7 +1057,7 @@ window.__ModuleLoader__.load({
       biliError = ''
       var endpoint = biliQuery
         ? BASE + '/api/bili-search?keyword=' + encodeURIComponent(biliQuery) + '&_t=' + Date.now()
-        : BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16&pn=' + biliPage + '&_t=' + Date.now()
+        : BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16&pn=' + biliPage + '&rid=' + biliRid + '&_t=' + Date.now()
       try {
         var response = await fetch(endpoint, { headers: { Accept: 'application/json' } })
         var payload = await response.json()
