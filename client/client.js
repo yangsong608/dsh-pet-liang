@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '33'
+    var ASSET_V = '39'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -157,7 +157,7 @@ window.__ModuleLoader__.load({
         effort: selection ? selection.effort : '',
         tier: tier,
         character: 'moss',
-        asset: 'moss-idle-a.webp',
+        asset: 'moss-base.webp',
         title: 'MOSS',
         subtitle: '空闲',
         aura: '#5ee7ff',
@@ -247,6 +247,14 @@ window.__ModuleLoader__.load({
       'transform-origin:50% 4%;animation:pet-sway 5.6s ease-in-out infinite;}',
       '#' + ROOT_ID + '[data-character="liang"] .body{transform-origin:50% 100%;animation-name:pet-float;}',
       '#' + ROOT_ID + '[data-working="1"] .body{animation-duration:2.4s;}',
+      '#' + ROOT_ID + ' .figwrap{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;}',
+      '#' + ROOT_ID + ' .forearm{position:absolute;left:0;bottom:16px;width:100%;height:auto;z-index:3;',
+      'pointer-events:none;transform-origin:62.89% 35.55%;animation:pet-arm 5.2s ease-in-out infinite;',
+      'transition:opacity .3s linear;',
+      '-webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);',
+      'mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);}',
+      '#' + ROOT_ID + '[data-working="1"] .forearm{opacity:0;animation:none;}',
+      '#' + ROOT_ID + '[data-character="liang"] .forearm{display:none;}',
       '#' + ROOT_ID + ' .figure{position:relative;z-index:2;max-height:188px;max-width:150px;width:auto;',
       'margin-bottom:16px;filter:drop-shadow(0 10px 20px rgba(0,0,0,.30));',
       '-webkit-mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);',
@@ -277,6 +285,7 @@ window.__ModuleLoader__.load({
       '@keyframes pet-sway{0%,100%{transform:rotate(-1.6deg) translateY(0)}25%{transform:rotate(0deg) translateY(-3px)}50%{transform:rotate(1.6deg) translateY(0)}75%{transform:rotate(0deg) translateY(3px)}}',
       '@keyframes pet-breathe{0%,100%{opacity:.18;transform:translateX(-50%) scale(1)}50%{opacity:.42;transform:translateX(-50%) scale(1.07)}}',
       '@keyframes pet-ring{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.28}50%{transform:translateX(-50%) scaleX(1.12) scaleY(1.3);opacity:.7}}',
+      '@keyframes pet-arm{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}',
       '@keyframes pet-core{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.9)}45%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}}',
       '@keyframes pet-core-halo{0%,100%{opacity:.25;transform:scale(.9)}45%{opacity:.7;transform:scale(1.25)}}',
       '@keyframes pet-swap{0%{opacity:1;filter:blur(0)}38%{opacity:.12;filter:blur(5px)}70%{opacity:0;filter:blur(9px)}100%{opacity:1;filter:blur(0)}}',
@@ -403,35 +412,6 @@ window.__ModuleLoader__.load({
       })
     }
 
-    /* MOSS 关节动画：三帧同机位硬切换（无淡入，不会重影） */
-    var jointTimer = null
-    var jointPhase = 0
-    var JOINT_MS = 2300
-
-    function stopJoint() {
-      if (jointTimer) {
-        clearInterval(jointTimer)
-        jointTimer = null
-      }
-      jointPhase = 0
-    }
-
-    function startJoint() {
-      if (jointTimer) return
-      jointTimer = setInterval(function () {
-        if (!overlay) return
-        var char = overlay.getAttribute('data-character')
-        var working = overlay.getAttribute('data-working') === '1'
-        if (char !== 'moss' || working) return
-        var fig = overlay.querySelector('.figure')
-        if (!fig) return
-        jointPhase = jointPhase ? 0 : 1
-        var next = jointPhase ? 'moss-idle-b.webp' : 'moss-idle-a.webp'
-        fig.src = assetUrl(next)
-        fig.setAttribute('data-asset', next)
-      }, JOINT_MS)
-    }
-
     function buildOverlay() {
       ensureStyle()
       var existing = document.getElementById(ROOT_ID)
@@ -447,13 +427,20 @@ window.__ModuleLoader__.load({
       var ring = el('div', 'ring')
       var core = el('div', 'core')
       var body = el('div', 'body')
+      var figwrap = el('div', 'figwrap')
       var figure = el('img', 'figure')
-      figure.src = assetUrl('moss-idle-a.webp')
+      figure.src = assetUrl('moss-base.webp')
       figure.alt = ''
       figure.draggable = false
-      figure.setAttribute('data-asset', 'moss-idle-a.webp')
+      figure.setAttribute('data-asset', 'moss-base.webp')
       figure.setAttribute('data-char', 'moss')
-      body.appendChild(figure)
+      var forearm = el('img', 'forearm')
+      forearm.src = assetUrl('moss-forearm.webp')
+      forearm.alt = ''
+      forearm.draggable = false
+      figwrap.appendChild(figure)
+      figwrap.appendChild(forearm)
+      body.appendChild(figwrap)
       body.appendChild(core)
       stage.appendChild(aura)
       stage.appendChild(ring)
@@ -489,12 +476,11 @@ window.__ModuleLoader__.load({
         }
       })
 
-      ;['moss-idle-a.webp', 'moss-idle-b.webp', 'moss-work.webp'].forEach(function (name) {
+      ;['moss-base.webp', 'moss-forearm.webp', 'moss-work.webp'].forEach(function (name) {
         try { var img = new Image(); img.src = assetUrl(name) } catch (e) { /* noop */ }
       })
 
       document.body.appendChild(root)
-      startJoint()
       restorePosition(root)
       bindDrag(root)
       overlay = root
@@ -541,7 +527,6 @@ window.__ModuleLoader__.load({
       if (aura) aura.style.opacity = String(0.3 + state.glow * 0.55)
 
 
-      startJoint()
 
       if (!figure) return
       var nextChar = state.character
