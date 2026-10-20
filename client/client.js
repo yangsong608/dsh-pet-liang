@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '16'
+    var ASSET_V = '20'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -248,8 +248,10 @@ window.__ModuleLoader__.load({
       'body:not([data-ds-dark-theme]) #' + ROOT_ID + ' .orb-face{background:radial-gradient(circle at 50% 30%,#f4f7fb 0%,#dfe6ef 80%);',
       'box-shadow:inset 0 0 18px rgba(0,0,0,.12),0 8px 20px rgba(0,0,0,.15);}',
 
-      '#' + ROOT_ID + ' .orb-img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;border-radius:50%;',
-      '#' + ROOT_ID + '[data-character="moss"] .orb-img{object-position:50% 46%;}',
+            '#' + ROOT_ID + '[data-character="moss"] .orb-face{background:#07090d;}',
+      'body:not([data-ds-dark-theme]) #' + ROOT_ID + '[data-character="moss"] .orb-face{background:#07090d;}',
+'#' + ROOT_ID + ' .orb-img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;border-radius:50%;',
+      '#' + ROOT_ID + '[data-character="moss"] .orb-img{object-position:50% 50%;}',
       'animation:orb-breathe 4.6s ease-in-out infinite;transform-origin:50% 60%;}',
       '#' + ROOT_ID + '[data-working="1"] .orb-img{animation-duration:1.7s;}',
 

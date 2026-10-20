@@ -6,7 +6,9 @@
 
 ![四档梁神：圆形头像舱](screenshots/05-tiers.png)
 
-![梁神 / MOSS 工作态](screenshots/01-liang.png) ![MOSS 执行中](screenshots/02-moss-working.png)
+![梁神 Max](screenshots/01-liang.png)
+
+![MOSS 空闲 / 执行中](screenshots/02-moss-states.png)
 
 ## 它按什么规则变
 
