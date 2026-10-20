@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '28'
+    var ASSET_V = '29'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -296,8 +296,9 @@ window.__ModuleLoader__.load({
     var overlay = null
     var switchTimers = []
     var biliOpen = false
-    var biliKind = 'hot'
+    var biliKind = 'new'
     var biliQuery = ''
+    var biliPage = 1
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -553,8 +554,9 @@ window.__ModuleLoader__.load({
 
     var bw = null                 // 窗口根节点
     var biliOpen = false
-    var biliKind = 'hot'
+    var biliKind = 'new'
     var biliQuery = ''
+    var biliPage = 1
     var biliMode = 'list'
     var biliList = null
     var biliError = ''
@@ -709,6 +711,7 @@ window.__ModuleLoader__.load({
         }
         biliList = null
         biliError = ''
+        if (!biliQuery && biliKind === 'hot') biliPage = biliPage >= 5 ? 1 : biliPage + 1
         renderBili()
         void loadBili()
       })
@@ -723,7 +726,7 @@ window.__ModuleLoader__.load({
       head.appendChild(close)
 
       var tabs = el('div', 'bw-tabs')
-      ;[['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
+      ;[['new', '最新'], ['hot', '热门'], ['rank', '排行']].forEach(function (pair) {
         var button = el('button', '', pair[1])
         button.type = 'button'
         button.setAttribute('data-kind', pair[0])
@@ -732,6 +735,7 @@ window.__ModuleLoader__.load({
           biliQuery = ''
           if (biliKind === pair[0] && biliList) return
           biliKind = pair[0]
+          biliPage = 1
           biliList = null
           biliMode = 'list'
           renderBili()
@@ -809,6 +813,17 @@ window.__ModuleLoader__.load({
       var m = Math.floor(total / 60)
       var sec = total % 60
       return m + ':' + (sec < 10 ? '0' + sec : String(sec))
+    }
+
+    function formatAgo(pubdate) {
+      var ts = Number(pubdate) || 0
+      if (!ts) return ''
+      var diff = Math.max(0, Math.floor((Date.now() - ts * 1000) / 1000))
+      if (diff < 60) return '刚刚'
+      if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'
+      if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'
+      if (diff < 86400 * 30) return Math.floor(diff / 86400) + ' 天前'
+      return new Date(ts * 1000).toLocaleDateString('zh-CN')
     }
 
     function formatViews(value) {
@@ -898,7 +913,8 @@ window.__ModuleLoader__.load({
           }
           var meta = el('div', 'bw-meta')
           meta.appendChild(el('div', 'bw-name', item.title || item.bvid))
-          meta.appendChild(el('div', 'bw-sub', (item.owner || '') + ' · ' + formatViews(item.views) + ' 播放 · ' + formatDuration(item.duration)))
+          var when = formatAgo(item.pubdate)
+          meta.appendChild(el('div', 'bw-sub', (item.owner || '') + ' · ' + formatViews(item.views) + ' 播放 · ' + formatDuration(item.duration) + (when ? ' · ' + when : '')))
           row.appendChild(meta)
           row.addEventListener('click', function (event) {
             event.stopPropagation()
@@ -914,8 +930,8 @@ window.__ModuleLoader__.load({
     async function loadBili() {
       biliError = ''
       var endpoint = biliQuery
-        ? BASE + '/api/bili-search?keyword=' + encodeURIComponent(biliQuery)
-        : BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16'
+        ? BASE + '/api/bili-search?keyword=' + encodeURIComponent(biliQuery) + '&_t=' + Date.now()
+        : BASE + '/api/bili?kind=' + encodeURIComponent(biliKind) + '&ps=16&pn=' + biliPage + '&_t=' + Date.now()
       try {
         var response = await fetch(endpoint, { headers: { Accept: 'application/json' } })
         var payload = await response.json()
