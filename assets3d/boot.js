@@ -68,6 +68,8 @@ export function createMoss3D(canvas, opts) {
   const motionAmp = (opts && typeof opts.motionAmp === 'number') ? opts.motionAmp : 1
   let last = 0
 
+  let refit = null   /* 模型加载后由 fitCamera 赋值 */
+
   function resize() {
     const w = canvas.clientWidth || 176
     const h = canvas.clientHeight || 196
@@ -76,7 +78,17 @@ export function createMoss3D(canvas, opts) {
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    /* 画布从 0 尺寸变为可见时，必须重新算相机距离 */
+    if (typeof refit === 'function') refit()
   }
+
+  /* 画布尺寸变化（显示/隐藏、窗口缩放、布局变化）都要重新取景 */
+  try {
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => { if (!disposed) resize() })
+      ro.observe(canvas)
+    }
+  } catch (e) { /* noop */ }
 
   new FBXLoader().load(url('moss.fbx'), (obj) => {
     obj.traverse((n) => {
@@ -280,40 +292,68 @@ export function createMoss3D(canvas, opts) {
     const fovRad = (camera.fov * Math.PI) / 180
     /* 取景：按「绕颈部轴旋转一周扫出的包围球」算，水平/垂直两个方向都要装得下。
        之前的做法只按垂直范围算，竖长画布(宽高比<1)时横向会被裁掉。 */
+    /* 取景范围：按真实关节组合采样得到包围盒。
+       机身同时受 J1(颈部) 与 J2(中臂) 两级偏航影响，单纯看「到颈部轴的距离」会低估。 */
     let maxH = 0
     let maxV = 0
     {
-      const axisX = -0.40
-      const axisZ = 18.00
-      const pv = new THREE.Vector3()
+      /* 1) 收集整机点云（含被隐藏的 Moss_arm，它覆盖全机） */
+      const pts = []
       obj.traverse((n) => {
-        if (!n.isMesh || n.name === 'Moss_arm') return
+        if (!n.isMesh) return
         const posAttr = n.geometry && n.geometry.attributes && n.geometry.attributes.position
         if (!posAttr) return
         n.updateMatrixWorld(true)
-        const step = Math.max(1, Math.floor(posAttr.count / 600))
+        const step = Math.max(1, Math.floor(posAttr.count / 200))
+        const pv = new THREE.Vector3()
         for (let i = 0; i < posAttr.count; i += step) {
           pv.fromBufferAttribute(posAttr, i).applyMatrix4(n.matrixWorld)
-          /* 相对旋转轴的水平距离 + 竖向高度，取最远点 */
-          const h = Math.hypot(pv.x - axisX, pv.z - axisZ)
-          const v = Math.abs(pv.y)
-          if (h > maxH) maxH = h        /* 旋转扫出的最大水平半径 */
-          if (v > maxV) maxV = v        /* 最大竖向半高 */
+          pts.push(pv.clone())
         }
       })
+      /* 2) 用与渲染一致的枢轴链，遍历拖动可达到的角度组合 */
+      const P1 = new THREE.Vector3(-0.40, 79.90, 18.00)
+      const P2 = new THREE.Vector3(32.90, 60.60, 18.00)
+      const P3 = new THREE.Vector3(19.0, 13.57, 18.04)
+      const o1 = new THREE.Object3D(); o1.position.copy(P1)
+      const o2 = new THREE.Object3D(); o2.position.copy(P2).sub(P1); o1.add(o2)
+      const o3 = new THREE.Object3D(); o3.position.copy(P3).sub(P2); o2.add(o3)
+      o1.updateMatrixWorld(true)
+      const pv = new THREE.Vector3()
+      for (let yaw = -180; yaw <= 180; yaw += 20) {
+        for (let pitch = -45; pitch <= 45; pitch += 15) {
+          o1.rotation.set(0, (yaw * 0.5 * Math.PI) / 180, 0)
+          o2.rotation.set(0, (yaw * 0.5 * Math.PI) / 180, 0)
+          o3.rotation.set((pitch * Math.PI) / 180, 0, 0)
+          o1.updateMatrixWorld(true)
+          for (const q of pts) {
+            pv.copy(q).applyMatrix4(o3.matrixWorld)
+            const h = Math.hypot(pv.x, pv.z)
+            const v = Math.abs(pv.y)
+            if (h > maxH) maxH = h
+            if (v > maxV) maxV = v
+          }
+        }
+      }
+      /* 恢复零位 */
+      o1.rotation.set(0, 0, 0); o2.rotation.set(0, 0, 0); o3.rotation.set(0, 0, 0)
     }
-    const el = canvas
-    const aspect = Math.max(0.2, (el.clientWidth || 1) / (el.clientHeight || 1))
-    const halfV = fovRad / 2
-    const halfH = Math.atan(Math.tan(halfV) * aspect)
-    /* 水平要装下 2×maxH，垂直要装下 2×maxV；两边各自算距离取大者 */
-    const distH = Math.max(1, maxH) / Math.tan(halfH)
-    const distV = Math.max(1, maxV) / Math.tan(halfV)
-    const dist = Math.max(distH, distV) * 1.06
-    /* 3/4 视角：正对时绕垂直轴的偏航会变成「往屏幕里外摆」，看不出来 */
     const AZ = 26 * Math.PI / 180
-    camera.position.set(focusX + Math.sin(AZ) * dist, size.y * 0.06, Math.cos(AZ) * dist)
-    camera.lookAt(focusX, 0, 0)
+    const fitCamera = () => {
+      const cw = canvas.clientWidth || canvas.width || 1
+      const ch = canvas.clientHeight || canvas.height || 1
+      const aspect = Math.max(0.2, cw / ch)
+      const halfV = fovRad / 2
+      const halfH = Math.atan(Math.tan(halfV) * aspect)
+      /* 水平要装下 2×maxH，垂直要装下 2×maxV；两边各自算距离取大者 */
+      const distH = Math.max(1, maxH) / Math.tan(halfH)
+      const distV = Math.max(1, maxV) / Math.tan(halfV)
+      const dist = Math.max(distH, distV) * 1.10
+      camera.position.set(focusX + Math.sin(AZ) * dist, size.y * 0.06, Math.cos(AZ) * dist)
+      camera.lookAt(focusX, 0, 0)
+      camera.updateProjectionMatrix()
+    }
+    fitCamera()
     resize()
     loop()
   }, undefined, (err) => {

@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '84'
+    var ASSET_V = '92'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -274,8 +274,8 @@ window.__ModuleLoader__.load({
       'transform-origin:50% 4%;animation:pet-sway 5.6s ease-in-out infinite;}',
       '#' + ROOT_ID + '[data-character="liang"] .body{transform-origin:50% 100%;animation-name:pet-float;}',
       '#' + ROOT_ID + '[data-working="1"] .body{animation-duration:2.4s;}',
-      '#' + ROOT_ID + ' .figwrap{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;}',
-      '#' + ROOT_ID + ' .moss3d{position:absolute;left:0;bottom:16px;width:100%;height:100%;z-index:4;display:none;}',
+      '#' + ROOT_ID + ' .figwrap{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;width:100%;height:100%;}',
+      '#' + ROOT_ID + ' .moss3d{position:absolute;left:0;top:0;width:100%;height:100%;z-index:6;display:none;}',
       '#' + ROOT_ID + ' .moss3d.on{display:block;}',
       '#' + ROOT_ID + ' .forearm{position:absolute;left:0;bottom:16px;width:100%;height:auto;z-index:3;',
       'pointer-events:none;display:none; /* PNG 兜底不做关节动效：切图旋转会导致机身与手臂分离 */',
@@ -572,12 +572,12 @@ window.__ModuleLoader__.load({
       forearm.draggable = false
       figwrap.appendChild(figure)
       figwrap.appendChild(forearm)
-      figwrap.appendChild(canvas3d)
       body.appendChild(figwrap)
       body.appendChild(core)
       stage.appendChild(aura)
       stage.appendChild(ring)
       stage.appendChild(body)
+      stage.appendChild(canvas3d)
 
       var hud = el('div', 'hud')
       var nameNode = el('span', 'name', 'MOSS')
