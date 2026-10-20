@@ -180,8 +180,9 @@ export function createMoss3D(canvas, opts) {
         const hb = new THREE.Box3().setFromObject(handMesh)
         const bodyMesh0 = obj.getObjectByName('Moss_Main')
         const bb0 = bodyMesh0 ? new THREE.Box3().setFromObject(bodyMesh0) : hb
-        /* J3 轴心：机身↔手块接合处的垂直圆柱（拟合 r=8.16 残差 16.2%） */
-        const P3 = new THREE.Vector3(19.0, -5.0, 15.1)
+        /* J3 轴心：手块凸台是沿 X 轴的圆柱（拟合 r=6.59 残差 20.6%，
+           绕垂直轴拟合残差 52.3% —— 所以 J3 必须是水平 X 轴，即点头） */
+        const P3 = new THREE.Vector3(19.0, 13.57, 18.04)
         const p1 = new THREE.Group(); p1.position.copy(P1); parent.add(p1); parent.updateMatrixWorld(true)
         p1.attach(upperMesh)
         const p2 = new THREE.Group(); p2.position.copy(P2).sub(P1); p1.add(p2); p1.updateMatrixWorld(true)
@@ -301,10 +302,10 @@ export function createMoss3D(canvas, opts) {
       const to = POSES[idx + 1]
       const ang = (k) => ((from[k] + (to[k] - from[k]) * ease) * amp) * Math.PI / 180
       const frozen = typeof window !== 'undefined' && window.__freeze__
-      /* 三根轴均由圆柱拟合确定，全部是垂直轴 */
+      /* J1/J2 = 垂直轴偏航；J3 = 水平 X 轴点头（由手块凸台圆柱拟合得出） */
       if (armTop) armTop.rotation.set(0, frozen ? 0 : ang('a1'), 0)
       if (armMid) armMid.rotation.set(0, frozen ? 0 : ang('a2'), 0)
-      if (armWrist) armWrist.rotation.set(0, frozen ? 0 : ang('a3'), 0)
+      if (armWrist) armWrist.rotation.set(frozen ? 0 : ang('a3'), 0, 0)
     }
     if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 0.8
     renderer.render(scene, camera)
