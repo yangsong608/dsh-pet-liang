@@ -176,7 +176,7 @@ check('最低档 → 小梁', lowEffort.tier === 1 && lowEffort.title === '小�
 check('最高档 → 梁神', highEffort.tier === 4 && highEffort.title === '梁神')
 
 const working = internals.decide({ sessionId: 's1', running: true, modelState: modelState('deepseek-official', 'm', 'high', efforts) })
-check('DeepSeek 执行中 → MOSS 工作态', working.character === 'moss' && working.asset === 'moss-focus.webp' && working.working === true)
+check('DeepSeek 执行中 → MOSS 工作态', working.character === 'moss' && working.asset === 'moss-work.webp' && working.working === true)
 
 const otherModelIdle = internals.decide({ sessionId: 's1', running: false, modelState: modelState('openai', 'gpt-x', '', []) })
 check('非 DeepSeek 空闲 → MOSS 空闲', otherModelIdle.character === 'moss' && otherModelIdle.asset === 'moss-idle.webp' && otherModelIdle.working === false)

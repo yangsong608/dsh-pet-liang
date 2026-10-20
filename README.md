@@ -4,14 +4,16 @@
 >
 > 版本 0.1.0 · 适配 dsh `>=0.2.0-rc.1 <0.3.0-0` · 无运行时依赖、无构建步骤
 
-![四档梁神 / MOSS / 费用](screenshots/05-states.png)
+![四档梁神](screenshots/05-tiers.png)
+
+![梁神 / MOSS 工作态](screenshots/01-liang.png) ![MOSS 执行中](screenshots/02-moss-working.png)
 
 ## 它按什么规则变
 
 | 条件 | 形象 | 状态 |
 |---|---|---|
 | DeepSeek 自带模型 + 空闲 | 梁神（按推理等级四档） | 待命 / 呼吸 |
-| 任意模型 + 会话执行中 | MOSS（`moss-focus`） | 执行中（光环旋转、呼吸加快） |
+| 任意模型 + 会话执行中 | MOSS 工作态（红色摄像眼亮起、金色环） | 执行中（光晕呼吸、指示点闪烁） |
 | 非 DeepSeek 模型 + 空闲 | MOSS 空闲 | 待命 |
 
 推理等级 → 形象档位（按当前模型可用档位归一，`off/low/medium/high` 四档为例）：
@@ -29,7 +31,8 @@
 
 1. **换形动画**：梁神 ↔ MOSS 切换时，形象先溶解、全息扫描线扫过、新形态在光晕闪光里重构（约 780ms）。同角色换档（梁子→梁圣）只做 180ms 淡入，不重放整段换形。
 2. **点击看费用**：点形象弹出费用卡——会话总价、缓存命中/未命中输入/输出三段 token 与各自金额、模型名、峰谷时段、价目口径。点空白处或再点一次关闭。
-3. **不挡操作**：浮动层是 `position:fixed` 的独立节点，不进任何布局流；不点它就不会拦截鼠标。
+3. **可拖动**：按住形象拖到任意位置，松手记住（`localStorage: dsh-pet-liang:pos`），刷新与重启都保持；拖动不会误触发费用卡，窗口缩放会自动夹回可视区。
+4. **不挡操作**：浮动层是 `position:fixed` 的独立节点，不进任何布局流；不点它就不会拦截鼠标。
 
 ## 费用是怎么算的
 
@@ -65,8 +68,8 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 
 | 文件 | 来源 |
 |---|---|
-| `assets/liang-1..4.webp` | 本插件用 qwen-image-3.0 生成：底稿一张写实肖像 + 一张帝王版，再做四档调色与径向 alpha |
-| `assets/moss-*.webp` | 复用同工作区 `AI研发工作台/assets` 的 MOSS 立绘，转成按亮度做 alpha 的透明版 |
+| `assets/liang-1..4.webp` | qwen-image-3.0 生成一张帝王肖像，四档**同一张脸**只做色彩饱和/亮度/光晕分级（避免切档时"换人"） |
+| `assets/moss-idle.webp` / `moss-work.webp` | qwen-image-3.0 生成：黑色单体积分机 + 红色摄像眼（《流浪地球》里 MOSS/550W 的形态，不是人形机器人）；工作态换成亮起红光 + 金色环那张 |
 | `assets/holo-pedestal.webp` | qwen-image-3.0 生成的全息基座，裁成横条并加边缘遮罩 |
 
 立绘与基座都是"深色底 + 发光主体"，因此在 UI 上都用 alpha 抠出来再叠；没有实拍素材，也不含可识别真人的照片。
@@ -77,6 +80,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 - 桌宠挂在会话输入区的 dock 座位上，因此"当前会话"指的是你正打开的那个会话；没有会话时显示 MOSS 空闲兜底。
 - 费用是"按价目折算"的核算，不等于账单；企业折扣/协议价请改 `lib/index.js` 的 `PRICES`。
 - 形象切档依赖宿主模型目录里的 `reasoning.efforts`；宿主未暴露该字段时按单档处理。
+- 判定用的 provider/model 会写到浮动层的 `title`（鼠标悬停可见）和 `data-provider` 属性上；判定异常时看控制台 `[dsh-pet-liang] session=… provider=… model=… → liang/moss`。
 - 单进程、无持久化：拖拽位置等偏好不保存（也不打算加）。
 
 ## 结构

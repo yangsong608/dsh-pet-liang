@@ -35,6 +35,7 @@ window.__ModuleLoader__.load({
 
     var BASE = '/dsh-pet-liang'
     var ROOT_ID = 'dsh-pet-liang-root'
+    var POS_KEY = 'dsh-pet-liang:pos'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -112,7 +113,7 @@ window.__ModuleLoader__.load({
       }
       if (running) {
         decision.character = 'moss'
-        decision.asset = 'moss-focus.webp'
+        decision.asset = 'moss-work.webp'
         decision.title = 'MOSS'
         decision.subtitle = '执行中'
         decision.aura = '#5ee7ff'
@@ -215,16 +216,18 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + '{position:fixed;right:18px;bottom:96px;width:196px;z-index:2147483000;',
       'font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;color:var(--dsw-alias-label-primary,#e8edf5);',
       'user-select:none;-webkit-user-select:none;pointer-events:auto;}',
-      '#' + ROOT_ID + ' .dpl-stage{position:relative;width:196px;height:228px;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;}',
+      '#' + ROOT_ID + '{touch-action:none;}',
+      '#' + ROOT_ID + ' .dpl-stage{position:relative;width:196px;height:228px;display:flex;align-items:flex-end;justify-content:center;cursor:grab;}',
+      '#' + ROOT_ID + '.is-dragging .dpl-stage{cursor:grabbing;}',
+      '#' + ROOT_ID + '.is-dragging .dpl-figure{animation-play-state:paused;}',
       '#' + ROOT_ID + ' .dpl-aura{position:absolute;left:50%;bottom:26px;width:190px;height:150px;transform:translateX(-50%);',
       'filter:blur(18px);opacity:.55;border-radius:50%;transition:background .6s ease,opacity .6s ease;}',
       '#' + ROOT_ID + ' .dpl-base{position:absolute;left:50%;bottom:2px;width:186px;transform:translateX(-50%);opacity:.92;pointer-events:none;',
       '-webkit-mask-image:radial-gradient(ellipse 58% 64% at 50% 62%,#000 42%,rgba(0,0,0,.5) 68%,transparent 84%);',
       'mask-image:radial-gradient(ellipse 58% 64% at 50% 62%,#000 42%,rgba(0,0,0,.5) 68%,transparent 84%);}',
-      '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;',
-      'filter:drop-shadow(0 0 14px rgba(120,220,255,.28));animation:dpl-breathe 4.2s ease-in-out infinite;}',
-            '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{filter:drop-shadow(0 0 14px var(--dpl-aura)) contrast(1.04);}',
-      '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
+      '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;mix-blend-mode:screen;',
+      'animation:dpl-breathe 4.2s ease-in-out infinite;}',
+                  '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
       '#' + ROOT_ID + ' .dpl-ring{position:absolute;left:50%;bottom:10px;width:158px;height:32px;transform:translateX(-50%);',
       'border-radius:50%;border:1px solid var(--dpl-aura);opacity:.28;pointer-events:none;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-ring{opacity:.75;animation:dpl-spin 3.4s linear infinite;}',
@@ -257,7 +260,7 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .dpl-cost-note{margin-top:8px;padding-top:7px;border-top:1px dashed color-mix(in srgb,var(--dpl-aura) 22%,transparent);',
       'opacity:.6;font-size:10.5px;line-height:1.5;}',
       '@keyframes dpl-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
-      '@keyframes dpl-spin{0%{transform:translateX(-50%) rotate(0deg) scaleX(1)}50%{transform:translateX(-50%) rotate(180deg) scaleX(.82)}100%{transform:translateX(-50%) rotate(360deg) scaleX(1)}}',
+      '@keyframes dpl-spin{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.55}50%{transform:translateX(-50%) scaleX(1.06) scaleY(1.18);opacity:.95}}',
       '@keyframes dpl-blink{0%,100%{opacity:.25}50%{opacity:1}}',
       '@keyframes dpl-sweep{0%{top:-24px}100%{top:200px}}',
       '@keyframes dpl-swap{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}35%{opacity:.18;transform:translateY(-4px) scale(1.07);filter:blur(3px)}',
@@ -290,6 +293,94 @@ window.__ModuleLoader__.load({
       if (cls) node.className = cls
       if (text !== undefined && text !== null) node.textContent = text
       return node
+    }
+
+    /* ── 拖动：pointer 事件 + localStorage 记忆位置 ── */
+
+    var dragState = null
+    var suppressClick = false
+
+    function placeAt(root, x, y) {
+      var maxX = Math.max(0, window.innerWidth - root.offsetWidth)
+      var maxY = Math.max(0, window.innerHeight - root.offsetHeight)
+      root.style.left = Math.round(Math.min(Math.max(0, x), maxX)) + 'px'
+      root.style.top = Math.round(Math.min(Math.max(0, y), maxY)) + 'px'
+      root.style.right = 'auto'
+      root.style.bottom = 'auto'
+    }
+
+    function restorePosition(root) {
+      try {
+        var raw = window.localStorage.getItem(POS_KEY)
+        if (!raw) return
+        var pos = JSON.parse(raw)
+        if (typeof pos.x !== 'number' || typeof pos.y !== 'number') return
+        placeAt(root, pos.x, pos.y)
+      } catch (e) {
+        /* 无痕模式 / 存储被禁：保持默认右下角 */
+      }
+    }
+
+    function savePosition(root) {
+      try {
+        var rect = root.getBoundingClientRect()
+        window.localStorage.setItem(POS_KEY, JSON.stringify({ x: Math.round(rect.left), y: Math.round(rect.top) }))
+      } catch (e) {
+        /* noop */
+      }
+    }
+
+    function bindDrag(root) {
+      root.addEventListener('pointerdown', function (event) {
+        if (event.button !== 0) return
+        var rect = root.getBoundingClientRect()
+        root.style.left = rect.left + 'px'
+        root.style.top = rect.top + 'px'
+        root.style.right = 'auto'
+        root.style.bottom = 'auto'
+        dragState = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originLeft: rect.left,
+          originTop: rect.top,
+          moved: false,
+        }
+        root.classList.add('is-dragging')
+      })
+
+      document.addEventListener('pointermove', function (event) {
+        if (!dragState || event.pointerId !== dragState.pointerId) return
+        var dx = event.clientX - dragState.startX
+        var dy = event.clientY - dragState.startY
+        if (!dragState.moved && Math.abs(dx) + Math.abs(dy) < 5) return
+        dragState.moved = true
+        placeAt(root, dragState.originLeft + dx, dragState.originTop + dy)
+        if (event.cancelable) event.preventDefault()
+      })
+
+      function finish(event) {
+        if (!dragState || event.pointerId !== dragState.pointerId) return
+        var moved = dragState.moved
+        dragState = null
+        root.classList.remove('is-dragging')
+        if (!moved) return
+        /* 拖过就别再当成点击，否则松手瞬间会弹出费用卡 */
+        suppressClick = true
+        window.setTimeout(function () {
+          suppressClick = false
+        }, 0)
+        savePosition(root)
+      }
+
+      document.addEventListener('pointerup', finish)
+      document.addEventListener('pointercancel', finish)
+
+      window.addEventListener('resize', function () {
+        if (!root.style.left) return
+        var rect = root.getBoundingClientRect()
+        placeAt(root, rect.left, rect.top)
+      })
     }
 
     function buildOverlay() {
@@ -337,18 +428,21 @@ window.__ModuleLoader__.load({
       root.appendChild(stage)
       root.appendChild(hud)
 
-      stage.addEventListener('click', function (event) {
+      /* 点击判定放在 root 上：pointer capture 会把 click 重定向到捕获元素，
+         挂在 stage 上会收不到。费用卡内部点击不触发开关。 */
+      root.addEventListener('click', function (event) {
         event.stopPropagation()
+        if (suppressClick) return
+        if (event.target && event.target.closest && event.target.closest('.dpl-cost')) return
         void toggleCost()
-      })
-      cost.addEventListener('click', function (event) {
-        event.stopPropagation()
       })
       document.addEventListener('click', function () {
         if (costOpen) closeCost()
       })
 
       document.body.appendChild(root)
+      restorePosition(root)
+      bindDrag(root)
       overlay = root
       paint(current, false)
       return root
@@ -366,6 +460,14 @@ window.__ModuleLoader__.load({
       overlay.style.setProperty('--dpl-aura', state.aura)
       overlay.setAttribute('data-character', state.character)
       overlay.setAttribute('data-working', state.working ? '1' : '0')
+      overlay.setAttribute('data-tier', String(state.tier))
+      overlay.setAttribute('data-provider', state.provider || '')
+      /* 悬浮可看到当前判定的模型/档位，出问题时不用开控制台 */
+      overlay.title =
+        (state.modelLabel || state.model || '未知模型') +
+        (state.effort ? ' · ' + state.effort : '') +
+        (state.provider ? ' · ' + state.provider : '') +
+        (state.character === 'liang' ? ' · ' + state.title : ' · MOSS')
 
       var figure = overlay.querySelector('.dpl-figure')
       var nameNode = overlay.querySelector('.dpl-name')
@@ -480,41 +582,61 @@ window.__ModuleLoader__.load({
     /* ────────────────────────── 桥：宿主状态 → 浮动层 ────────────────────────── */
 
     function useModelState(ctx, sessionId) {
-      var directory = useMemo(function () {
-        try {
-          var service = ctx.modelDirectories
-          if (!service || typeof service.directoryFor !== 'function' || !sessionId) return null
-          var dir = service.directoryFor(sessionId)
-          if (dir && typeof dir.load === 'function') {
-            var loaded = dir.load()
-            if (loaded && typeof loaded.catch === 'function') loaded.catch(function () {})
-          }
-          return dir
-        } catch (e) {
-          return null
+      /* directoryFor() 在会话还没绑定 scope 时会抛错；一次性 useMemo 会把「没取到」永久钉住，
+         于是 provider 为空 → 一直被判成非 DeepSeek → 永远 MOSS。这里改成带重试的 state。 */
+      var pair = react.useState(null)
+      var directory = pair[0]
+      var setDirectory = pair[1]
+      useEffect(function () {
+        var cancelled = false
+        var tries = 0
+        function attempt() {
+          if (cancelled || !sessionId) return
+          try {
+            var service = ctx.modelDirectories
+            if (service && typeof service.directoryFor === 'function') {
+              var dir = service.directoryFor(sessionId)
+              if (dir) {
+                setDirectory(dir)
+                try {
+                  var loaded = typeof dir.load === 'function' ? dir.load() : null
+                  if (loaded && typeof loaded.catch === 'function') loaded.catch(function () {})
+                } catch (e) { /* noop */ }
+                return
+              }
+            }
+          } catch (e) { /* 会话还没 bind，稍后重试 */ }
+          tries += 1
+          if (tries < 16) window.setTimeout(attempt, 250)
+        }
+        attempt()
+        return function () {
+          cancelled = true
         }
       }, [ctx, sessionId])
+
+      var store = directory && directory.store ? directory.store : directory
 
       var subscribeDir = useMemo(function () {
         return function (listener) {
           try {
-            if (directory && typeof directory.subscribe === 'function') return directory.subscribe(listener)
+            if (store && typeof store.subscribe === 'function') return store.subscribe(listener)
           } catch (e) {
             /* noop */
           }
           return function () {}
         }
-      }, [directory])
+      }, [store])
 
       var readDir = useMemo(function () {
         return function () {
           try {
-            return directory && typeof directory.getSnapshot === 'function' ? directory.getSnapshot() : null
+            return store && typeof store.getSnapshot === 'function' ? store.getSnapshot() : null
           } catch (e) {
             return null
           }
         }
-      }, [directory])
+      }, [store])
 
       if (!useSyncExternalStore) return null
       return useSyncExternalStore(subscribeDir, readDir, readDir)
@@ -541,6 +663,16 @@ window.__ModuleLoader__.load({
 
       useEffect(function () {
         publish(decision)
+        try {
+          /* 一次性诊断日志：模型判定出问题时，让用户能把这三行贴回来 */
+          console.info('[dsh-pet-liang]',
+            'session=' + String(sessionId || '(none)'),
+            'provider=' + (decision.provider || '(unknown)'),
+            'model=' + (decision.model || '(unknown)'),
+            'effort=' + (decision.effort || '(default)'),
+            'running=' + String(decision.running),
+            '→ ' + decision.character + '/' + decision.asset)
+        } catch (e) { /* noop */ }
       }, [decision])
 
       return null
