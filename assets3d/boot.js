@@ -32,6 +32,7 @@ export function createMoss3D(canvas, opts) {
   let lensLamp = null
   let armTop = null
   let armMid = null
+  let armWrist = null
   let working = false
   let disposed = false
   let raf = 0
@@ -77,137 +78,31 @@ export function createMoss3D(canvas, opts) {
     objRoot = obj
     obj.updateMatrixWorld(true)
 
-    /* ── 机械臂拆分：模型的手臂是 52 个独立零件，按高度分成上臂 / 前臂 / 手 ──
-       每段绕自己的关节旋转，段与段之间是真实关节，不会撕裂。 */
-    const arm = obj.getObjectByName('Moss_arm')
-    if (arm) {
-      const geo = arm.geometry
-      const posAttr = geo.attributes.position
-      const norAttr = geo.attributes.normal
-      const uvAttr = geo.attributes.uv
-      const total = posAttr.count
-
-      /* 1) 按坐标焊接后并查集，得到三角面所属的连通块 */
-      const weld = new Map()
-      const wid = new Int32Array(total)
-      for (let i = 0; i < total; i += 1) {
-        const k = posAttr.getX(i).toFixed(2) + ',' + posAttr.getY(i).toFixed(2) + ',' + posAttr.getZ(i).toFixed(2)
-        let id = weld.get(k)
-        if (id === undefined) { id = weld.size; weld.set(k, id) }
-        wid[i] = id
+    /* ── 关节 ──────────────────────────────────────────────────────
+       模型结构实测：顶部横梁 + 头部 + 整条手臂被焊成同一个 mesh（Moss_arm），
+       只有机身（Moss_Main / Moss_Annexes / Moss_Glass）是独立 mesh。
+       所以唯一能无撕裂旋转的关节是「腕关节」：机身绕手臂末端摆动。
+       硬转整条手臂会把头部和机身一起拽走（已实测），因此不转手臂。 */
+    {
+      const body0 = obj.getObjectByName('Moss_Main')
+      if (body0) {
+        const mb = new THREE.Box3().setFromObject(body0)
+        /* 腕关节在机身右上角、手臂与机身相连处 */
+        const wristPos = new THREE.Vector3(
+          mb.max.x - (mb.max.x - mb.min.x) * 0.02,
+          mb.max.y - (mb.max.y - mb.min.y) * 0.06,
+          mb.getCenter(new THREE.Vector3()).z,
+        )
+        const wrist = new THREE.Group()
+        wrist.position.copy(obj.worldToLocal(wristPos.clone()))
+        obj.add(wrist)
+        obj.updateMatrixWorld(true)
+        ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
+          const part = obj.getObjectByName(nm)
+          if (part) wrist.attach(part)
+        })
+        armWrist = wrist
       }
-      const parent = new Int32Array(weld.size)
-      for (let i = 0; i < parent.length; i += 1) parent[i] = i
-      const find = (x) => { let r = x; while (parent[r] !== r) r = parent[r]; while (parent[x] !== r) { const n = parent[x]; parent[x] = r; x = n } return r }
-      const join = (a, b) => { const ra = find(a); const rb = find(b); if (ra !== rb) parent[ra] = rb }
-      for (let i = 0; i < total; i += 3) { join(wid[i], wid[i + 1]); join(wid[i], wid[i + 2]) }
-
-      /* 2) 每个连通块的世界坐标 Y（手臂网格可能带旋转，必须转到世界） */
-      arm.updateMatrixWorld(true)
-      const root = arm.matrixWorld
-      const toWorld = new THREE.Vector3()
-      const compY = new Map()
-      for (let i = 0; i < total; i += 1) {
-        const r = find(wid[i])
-        toWorld.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(root)
-        const rec = compY.get(r)
-        if (!rec) compY.set(r, { y0: toWorld.y, y1: toWorld.y, sum: toWorld.y, n: 1 })
-        else { rec.y0 = Math.min(rec.y0, toWorld.y); rec.y1 = Math.max(rec.y1, toWorld.y); rec.sum += toWorld.y; rec.n += 1 }
-      }
-      let minY = Infinity; let maxY = -Infinity
-      compY.forEach((rec) => { minY = Math.min(minY, rec.y0); maxY = Math.max(maxY, rec.y1) })
-      const span = Math.max(0.001, maxY - minY)
-      const yShoulder = maxY - span * 0.30
-      const yElbow = maxY - span * 0.68
-
-      /* 3) 按组的包围盒把三角面分到三段里 */
-      const groupOf = new Map()   // componentRoot -> 0 上臂 / 1 前臂 / 2 手
-      compY.forEach((rec, r) => {
-        const mid = (rec.y0 + rec.y1) / 2
-        groupOf.set(r, mid > yShoulder ? 0 : mid > yElbow ? 1 : 2)
-      })
-
-      const buckets = [[], [], []]
-      for (let i = 0; i < total; i += 3) {
-        const gI = groupOf.get(find(wid[i])) || 0
-        buckets[gI].push(i)
-      }
-
-      const buildSub = (triStarts) => {
-        const count = triStarts.length * 3
-        const p2 = new Float32Array(count * 3)
-        const n2 = new Float32Array(count * 3)
-        const u2 = uvAttr ? new Float32Array(count * 2) : null
-        let w = 0
-        for (const start of triStarts) {
-          for (let k = 0; k < 3; k += 1) {
-            const v = start + k
-            p2[w * 3] = posAttr.getX(v); p2[w * 3 + 1] = posAttr.getY(v); p2[w * 3 + 2] = posAttr.getZ(v)
-            if (norAttr) { n2[w * 3] = norAttr.getX(v); n2[w * 3 + 1] = norAttr.getY(v); n2[w * 3 + 2] = norAttr.getZ(v) }
-            if (u2) { u2[w * 2] = uvAttr.getX(v); u2[w * 2 + 1] = uvAttr.getY(v) }
-            w += 1
-          }
-        }
-        const g2 = new THREE.BufferGeometry()
-        g2.setAttribute('position', new THREE.BufferAttribute(p2, 3))
-        if (norAttr) g2.setAttribute('normal', new THREE.BufferAttribute(n2, 3))
-        if (u2) g2.setAttribute('uv', new THREE.BufferAttribute(u2, 2))
-        return g2
-      }
-
-      const parentOfArm = arm.parent
-      const armMaterial = arm.material
-      const makePivot = (worldPos, parentObj) => {
-        const p = new THREE.Group()
-        p.position.copy(parentObj.worldToLocal(worldPos.clone()))
-        parentObj.add(p)
-        parentObj.updateMatrixWorld(true)
-        return p
-      }
-      const segWorld = [[], [], []]
-      for (let i = 0; i < total; i += 1) {
-        const gI = groupOf.get(find(wid[i])) || 0
-        toWorld.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).applyMatrix4(root)
-        segWorld[gI].push(toWorld.clone())
-      }
-      const topOf = (arr) => {
-        if (!arr.length) return new THREE.Vector3()
-        let top = -Infinity
-        for (const v of arr) { if (v.y > top) top = v.y }
-        let sx = 0; let sz = 0; let n = 0
-        for (const v of arr) { if (v.y > top - span * 0.05) { sx += v.x; sz += v.z; n += 1 } }
-        return new THREE.Vector3(sx / Math.max(1, n), top, sz / Math.max(1, n))
-      }
-      const elbowWorld = topOf(segWorld[1])
-      const wristWorld = topOf(segWorld[2])
-
-      const place = (triStarts) => {
-        const mesh = new THREE.Mesh(buildSub(triStarts), armMaterial)
-        mesh.matrix.copy(arm.matrix)
-        mesh.matrix.decompose(mesh.position, mesh.quaternion, mesh.scale)
-        return mesh
-      }
-
-      /* 头 + 上臂：刚性固定（它是整条臂的挂载端，不能转） */
-      const fixed = place(buckets[0])
-      parentOfArm.add(fixed)
-      parentOfArm.updateMatrixWorld(true)
-      fixed.matrix.copy(arm.matrix)
-      fixed.matrix.decompose(fixed.position, fixed.quaternion, fixed.scale)
-
-      /* 前臂：绕肘关节 */
-      const elbow = makePivot(elbowWorld, parentOfArm)
-      const fore = place(buckets[1])
-      elbow.attach(fore)
-
-      /* 手：绕腕关节，跟着肘一起动 */
-      const wrist = makePivot(wristWorld, parentOfArm)
-      const hand = place(buckets[2])
-      wrist.attach(hand)
-
-      arm.visible = false
-      armTop = elbow
-      armMid = wrist
     }
 
     /* 红眼：模型自带发光贴图只有 3 个 LED 点，主镜头没做发光，这里补一层 */
@@ -290,10 +185,12 @@ export function createMoss3D(canvas, opts) {
     const speed = working ? 2.6 : 1
     if (armTop) {
       /* 肩关节与肘关节反向配合：手臂抬起时小臂回折，手始终靠近机身 */
-      const amp = working ? 6 : 4
-      const s1 = Math.sin(t * 0.75 * speed) * (amp * Math.PI / 180)
-      armTop.rotation.z = s1
-      if (armMid) armMid.rotation.z = -s1 * 0.55
+      /* 腕关节：机身像挂件一样绕手臂末端摆动 */
+      if (armWrist) {
+        const amp = working ? 2.6 : 1.8
+        armWrist.rotation.z = Math.sin(t * 0.7 * speed) * (amp * Math.PI / 180)
+        armWrist.rotation.x = Math.sin(t * 0.5 * speed + 0.8) * (amp * 0.35 * Math.PI / 180)
+      }
     }
     if (lensCore && lensHalo) {
       /* 空闲：暗红呼吸；执行：亮起并快速脉冲 */
