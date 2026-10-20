@@ -181,7 +181,7 @@ const working = internals.decide({ sessionId: 's1', running: true, modelState: m
 check('DeepSeek 执行中 → MOSS 工作态', working.character === 'moss' && working.asset === 'moss-work.webp' && working.working === true)
 
 const otherModelIdle = internals.decide({ sessionId: 's1', running: false, modelState: modelState('openai', 'gpt-x', '', []) })
-check('明确非 DeepSeek 空闲 → MOSS 空闲', otherModelIdle.character === 'moss' && otherModelIdle.asset === 'moss-idle.webp' && otherModelIdle.working === false)
+check('明确非 DeepSeek 空闲 → MOSS 空闲', otherModelIdle.character === 'moss' && otherModelIdle.asset === 'moss-idle-a.webp' && otherModelIdle.working === false)
 
 const otherModelWorking = internals.decide({ sessionId: 's1', running: true, modelState: modelState('openai', 'gpt-x', '', []) })
 check('非 DeepSeek 执行中 → MOSS 工作态', otherModelWorking.character === 'moss' && otherModelWorking.working === true)
