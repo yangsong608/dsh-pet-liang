@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '31'
+    var ASSET_V = '33'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -253,7 +253,7 @@ window.__ModuleLoader__.load({
       'mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);}',
 
       /* MOSS 工作态：红光由 CSS 叠在镜头上，图片本身是干净的 */
-      '#' + ROOT_ID + ' .core{position:absolute;z-index:4;left:50%;top:47%;width:58px;height:58px;',
+      '#' + ROOT_ID + ' .core{position:absolute;z-index:4;left:43.5%;top:56.5%;width:58px;height:58px;',
       'transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;opacity:0;',
       'background:radial-gradient(circle,rgba(255,72,40,.98) 0%,rgba(255,96,40,.55) 38%,transparent 72%);',
       'filter:blur(4px);transition:opacity .4s ease;}',
