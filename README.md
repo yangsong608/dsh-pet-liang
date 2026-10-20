@@ -70,7 +70,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 | 文件 | 来源 |
 |---|---|
 | `assets/liang-1..4.webp` | 取自 [liang-intensity-calibrator](https://github.com/Lichtspektrum/liang-intensity-calibrator)（MIT，经 dsh-liang-skin 转制）的四个强度锚点 level-01 / level-10 / level-22 / stage-30 |
-| `assets/moss-idle.webp` / `moss-work.webp` | qwen-image-3.0 生成**无特效的干净机体**（镜头暗、无光晕无光环），rembg 抠成透明底；执行态的红光是 CSS 叠在镜头上，图片两张相同 |
+| `assets/moss-idle-a.webp` / `moss-idle-b.webp` / `moss-work.webp` | 按参考图（白灰工业挂载模块）生成三套姿态：空闲收臂 A/B、执行伸臂；顶部带**挂载横梁**；rembg 抠成透明底，图片本身无光效 |
 
 立绘与基座都是"深色底 + 发光主体"，因此在 UI 上都用 alpha 抠出来再叠；没有实拍素材，也不含可识别真人的照片。
 
@@ -86,7 +86,7 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 - 状态桥同时注册在两个座位（`conversation.input.dock` 与 `conversation.session.header.utilities`）互为兜底，任一挂载即可。
 - 单进程、无持久化：拖拽位置与档位不落盘（除了桌宠自己的位置记忆）。
 - 角色是**真透明抠图**（rembg / BRIA RMBG 模型），没有圆形背景、没有底框：立绘直接浮在界面上，底部有柔和投影与渐隐，不会出现硬边。
-- 图片本身是**干净的**：MOSS 原图只有机体（镜头不发光、没有光晕和光环），所有效果都由 CSS 叠加——光环呼吸、地面投影、立绘浮动、MOSS 执行时的红色镜头发光、换形闪白+溶解。
+- 图片本身是**干净的**：MOSS 三套姿态都不带光效，所有效果由 CSS 叠加——空闲时两张姿态交替（5.6s，读作机械臂关节微动）、执行时切换到伸臂姿态并在镜头上叠红色脉冲（1.25s）+ 外圈光晕、地面投影呼吸、换形闪白+溶解。
 - 点桌宠唤起 dsh-bili-widget 后，会自动把它的浮窗拖到桌宠左侧；它自带的粉色悬浮球已隐藏（仍作为唤起锚点）。
 
 ## 结构

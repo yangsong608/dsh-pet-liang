@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '24'
+    var ASSET_V = '25'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -157,7 +157,7 @@ window.__ModuleLoader__.load({
         effort: selection ? selection.effort : '',
         tier: tier,
         character: 'moss',
-        asset: 'moss-idle.webp',
+        asset: 'moss-idle-a.webp',
         title: 'MOSS',
         subtitle: '空闲',
         aura: '#5ee7ff',
@@ -252,12 +252,21 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + '[data-working="1"] .figure{animation-duration:1.8s;}',
 
       /* MOSS 工作态：红光由 CSS 叠在镜头上，图片本身是干净的 */
-      '#' + ROOT_ID + ' .core{position:absolute;z-index:3;left:50%;top:47%;width:46px;height:46px;',
+      '#' + ROOT_ID + ' .core{position:absolute;z-index:4;left:50%;top:47%;width:58px;height:58px;',
       'transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;opacity:0;',
-      'background:radial-gradient(circle,rgba(255,64,48,.95) 0%,rgba(255,64,48,.45) 42%,transparent 72%);',
-      'filter:blur(5px);transition:opacity .5s ease;}',
-      '#' + ROOT_ID + '[data-character="moss"][data-working="1"] .core{opacity:.95;animation:pet-core 1.5s ease-in-out infinite;}',
+      'background:radial-gradient(circle,rgba(255,72,40,.98) 0%,rgba(255,96,40,.55) 38%,transparent 72%);',
+      'filter:blur(4px);transition:opacity .4s ease;}',
+      '#' + ROOT_ID + '[data-character="moss"][data-working="1"] .core{opacity:1;animation:pet-core 1.25s ease-in-out infinite;}',
+      '#' + ROOT_ID + '[data-character="moss"][data-working="1"] .core::after{content:"";position:absolute;inset:-14px;border-radius:50%;',
+      'background:radial-gradient(circle,rgba(255,120,60,.35) 0%,transparent 70%);animation:pet-core-halo 1.25s ease-in-out infinite;}',
       '#' + ROOT_ID + '[data-character="liang"] .core{display:none;}',
+
+      '#' + ROOT_ID + ' .figure-b{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);',
+      'max-height:188px;max-width:150px;opacity:0;pointer-events:none;z-index:3;',
+      '-webkit-mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);',
+      'mask-image:linear-gradient(to bottom,#000 90%,transparent 100%);}',
+      '#' + ROOT_ID + '[data-character="moss"][data-working="0"] .figure-b{animation:pet-joint 5.6s ease-in-out infinite;}',
+      '#' + ROOT_ID + '[data-character="liang"] .figure-b{display:none;}',
 
       '#' + ROOT_ID + '.is-switching .figure{animation:pet-swap .72s ease-in-out;}',
       '#' + ROOT_ID + '.is-switching .aura{animation:pet-flash .72s ease-in-out;}',
@@ -273,7 +282,9 @@ window.__ModuleLoader__.load({
       '@keyframes pet-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}',
       '@keyframes pet-breathe{0%,100%{opacity:.18;transform:translateX(-50%) scale(1)}50%{opacity:.42;transform:translateX(-50%) scale(1.07)}}',
       '@keyframes pet-ring{0%,100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:.28}50%{transform:translateX(-50%) scaleX(1.12) scaleY(1.3);opacity:.7}}',
-      '@keyframes pet-core{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.92)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}',
+      '@keyframes pet-core{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.9)}45%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}}',
+      '@keyframes pet-core-halo{0%,100%{opacity:.25;transform:scale(.9)}45%{opacity:.7;transform:scale(1.25)}}',
+      '@keyframes pet-joint{0%,100%{opacity:0}45%,55%{opacity:1}}',
       '@keyframes pet-swap{0%{opacity:1;filter:blur(0)}38%{opacity:.12;filter:blur(5px)}70%{opacity:0;filter:blur(9px)}100%{opacity:1;filter:blur(0)}}',
       '@keyframes pet-flash{0%,100%{opacity:.2}45%{opacity:.95;filter:blur(30px)}}',
     ].join('')
@@ -413,12 +424,17 @@ window.__ModuleLoader__.load({
       var core = el('div', 'core')
       var body = el('div', 'body')
       var figure = el('img', 'figure')
-      figure.src = assetUrl('moss-idle.webp')
+      figure.src = assetUrl('moss-idle-a.webp')
       figure.alt = ''
       figure.draggable = false
-      figure.setAttribute('data-asset', 'moss-idle.webp')
+      figure.setAttribute('data-asset', 'moss-idle-a.webp')
       figure.setAttribute('data-char', 'moss')
+      var figureB = el('img', 'figure figure-b')
+      figureB.src = assetUrl('moss-idle-b.webp')
+      figureB.alt = ''
+      figureB.draggable = false
       body.appendChild(figure)
+      body.appendChild(figureB)
       body.appendChild(core)
       stage.appendChild(aura)
       stage.appendChild(ring)
@@ -499,6 +515,14 @@ window.__ModuleLoader__.load({
       }
       if (aura) aura.style.background = 'radial-gradient(circle,' + state.aura + ' 0%, transparent 68%)'
       if (aura) aura.style.opacity = String(0.3 + state.glow * 0.55)
+
+      var figB = overlay.querySelector('.figure-b')
+      if (figB) {
+        var wantB = state.character === 'moss' && !state.working
+        figB.src = assetUrl(wantB ? 'moss-idle-b.webp' : 'moss-idle-a.webp')
+        figB.style.display = wantB ? '' : 'none'
+        figB.style.opacity = wantB ? '' : '0'
+      }
 
       if (!figure) return
       var nextChar = state.character
