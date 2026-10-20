@@ -284,9 +284,9 @@ export function createMoss3D(canvas, opts) {
     {
       const POSES = [
         { a1: 0, a2: 0, a3: 0 },
-        { a1: 6, a2: -3, a3: 10 },
-        { a1: -5, a2: 3, a3: -9 },
-        { a1: 3, a2: -2, a3: 5 },
+        { a1: 20, a2: -10, a3: 10 },
+        { a1: -18, a2: 9, a3: -9 },
+        { a1: 9, a2: -4, a3: 5 },
         { a1: 0, a2: 0, a3: 0 },
       ]
       const SEG = working ? 1.1 : 1.7
