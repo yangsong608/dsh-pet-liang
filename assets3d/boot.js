@@ -178,8 +178,17 @@ export function createMoss3D(canvas, opts) {
         p1.attach(upperMesh)
         const p2 = new THREE.Group(); p2.position.copy(P[1]).sub(P[0]); p1.add(p2); p1.updateMatrixWorld(true)
         p2.attach(foreMesh)
-        const p3 = new THREE.Group(); p3.position.copy(P[2]).sub(P[1]); p2.add(p3); p2.updateMatrixWorld(true)
-        p3.attach(handMesh)
+        /* 手块与前臂是同一段（参考图里 J3 在「手块↔机身」之间，不是「前臂↔手块」） */
+        p2.attach(handMesh)
+
+        /* J3：只有机身绕它转，轴心取机身与手块的接合处 */
+        const bodyMesh = obj.getObjectByName('Moss_Main')
+        let j3 = new THREE.Vector3(20, 8, 18)
+        if (bodyMesh) {
+          const bb = new THREE.Box3().setFromObject(bodyMesh)
+          j3.set(bb.max.x - 2, (bb.min.y + bb.max.y) / 2 + (bb.max.y - bb.min.y) * 0.12, bb.getCenter(new THREE.Vector3()).z)
+        }
+        const p3 = new THREE.Group(); p3.position.copy(j3); parent.add(p3); parent.updateMatrixWorld(true)
         ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
           const part = obj.getObjectByName(nm)
           if (part) p3.attach(part)
@@ -304,7 +313,7 @@ export function createMoss3D(canvas, opts) {
       const ang = (k) => ((from[k] + (to[k] - from[k]) * e) * amp) * Math.PI / 180
       if (armTop) armTop.rotation.y = ang('a1')
       if (armMid) armMid.rotation.y = ang('a2')
-      if (armWrist) armWrist.rotation.y = ang('a3')
+      if (armWrist) armWrist.rotation.x = ang('a3') * 0.6
     renderer.render(scene, camera)
     if (!healthChecked) {
       healthChecked = true
