@@ -44,6 +44,8 @@ export function createMoss3D(canvas, opts) {
   let lensCore = null
   let lensHalo = null
   let lensLamp = null
+  let eyeCore = null
+  let eyeHalo = null
   let armTop = null
   let armMid = null
   let armWrist = null
@@ -252,6 +254,8 @@ export function createMoss3D(canvas, opts) {
       lensCore = core
       lensHalo = halo
       lensLamp = lensLight
+      eyeCore = core
+      eyeHalo = halo
     }
 
     /* 以机身（Moss_Main）为视觉中心，竖向撑满画布 */
@@ -282,33 +286,113 @@ export function createMoss3D(canvas, opts) {
     last = now || 0
     const t = (performance.now() - t0) / 1000
     const speed = working ? 2.6 : 1
-    /* 整机轻微悬浮：所有零件刚性同步，不可能分离 */
-    /* J1/J2 左右偏航，J3 前后点头 */
-    {
-      const POSES = [
-        { a1: 0, a2: 0, a3: 0 },
-        { a1: 12, a2: -6, a3: 5 },
-        { a1: -11, a2: 5, a3: -5 },
-        { a1: 5, a2: -3, a3: 2.5 },
-        { a1: 0, a2: 0, a3: 0 },
-      ]
-      const SEG = working ? 1.1 : 1.7
-      const amp = working ? 1.3 : 1
-      const loopLen = SEG * (POSES.length - 1)
-      const lt = (t * speed) % loopLen
-      const idx = Math.min(POSES.length - 2, Math.floor(lt / SEG))
-      const frac = (lt - idx * SEG) / SEG
-      const ease = frac * frac * (3 - 2 * frac)
-      const from = POSES[idx]
-      const to = POSES[idx + 1]
-      const ang = (k) => ((from[k] + (to[k] - from[k]) * ease) * amp) * Math.PI / 180
-      const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
-      /* J1/J2 = 垂直轴偏航；J3 = 水平 X 轴点头（由手块凸台圆柱拟合得出） */
-      if (armTop) armTop.rotation.set(0, frozen ? 0 : ang('a1'), 0)
-      if (armMid) armMid.rotation.set(0, frozen ? 0 : ang('a2'), 0)
-      if (armWrist) armWrist.rotation.set(frozen ? 0 : ang('a3'), 0, 0)
+    /* ── 动作脚本 ─────────────────────────────────────
+       两个模式各有一组「动作段」，按顺序循环；每段描述 a1/a2/a3 角度与红眼亮度。
+       空闲：小幅、慢、像在看人或思考
+       执行：大幅、快、带停顿的机械感，多个动作段轮流执行 */
+    const IDLE = [
+      { name: '环视', dur: 5.6, keys: [
+        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+        { t: 2.4, a1: 5.5, a2: -2, a3: 1.6, eye: 0.48 },
+        { t: 4.4, a1: -4.5, a2: 2, a3: -1.2, eye: 0.44 },
+        { t: 5.6, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+      ] },
+      { name: '思考', dur: 4.2, keys: [
+        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.38 },
+        { t: 1.1, a1: 1.5, a2: -1, a3: -2.6, eye: 0.72 },
+        { t: 2.8, a1: 2.2, a2: -1.2, a3: -2.2, eye: 0.44 },
+        { t: 4.2, a1: 0, a2: 0, a3: 0, eye: 0.38 },
+      ] },
+      { name: '微调', dur: 3.4, keys: [
+        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.40 },
+        { t: 1.5, a1: -3.0, a2: 1.2, a3: 1.0, eye: 0.52 },
+        { t: 3.4, a1: 0, a2: 0, a3: 0, eye: 0.42 },
+      ] },
+    ]
+
+    const WORK = [
+      { name: '扫描', dur: 3.4, keys: [
+        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.75 },
+        { t: 1.1, a1: -19, a2: 8, a3: -4, eye: 1.00 },
+        { t: 1.7, a1: -19, a2: 8, a3: -4, eye: 0.70 },
+        { t: 2.8, a1: 19, a2: -8, a3: 5, eye: 1.00 },
+        { t: 3.4, a1: 19, a2: -8, a3: 5, eye: 0.80 },
+      ] },
+      { name: '点头确认', dur: 2.2, keys: [
+        { t: 0.0, a1: 19, a2: -8, a3: 5, eye: 0.80 },
+        { t: 0.35, a1: 12, a2: -3, a3: 11, eye: 1.05 },
+        { t: 0.7, a1: 12, a2: -3, a3: -2, eye: 0.55 },
+        { t: 1.05, a1: 12, a2: -3, a3: 11, eye: 1.05 },
+        { t: 1.4, a1: 12, a2: -3, a3: -2, eye: 0.55 },
+        { t: 2.2, a1: 12, a2: -3, a3: 0, eye: 0.85 },
+      ] },
+      { name: '转向停顿', dur: 3.6, keys: [
+        { t: 0.0, a1: 12, a2: -3, a3: 0, eye: 0.85 },
+        { t: 0.6, a1: -16, a2: 7, a3: -3, eye: 1.00 },
+        { t: 1.5, a1: -16, a2: 7, a3: -3, eye: 0.62 },
+        { t: 2.1, a1: -16, a2: -9, a3: -6, eye: 0.95 },
+        { t: 3.0, a1: -16, a2: -9, a3: -6, eye: 0.70 },
+        { t: 3.6, a1: -10, a2: -4, a3: -2, eye: 0.85 },
+      ] },
+      { name: '快扫', dur: 2.4, keys: [
+        { t: 0.0, a1: -10, a2: -4, a3: -2, eye: 0.85 },
+        { t: 0.3, a1: 4, a2: -2, a3: 2, eye: 1.10 },
+        { t: 0.6, a1: -12, a2: 5, a3: -3, eye: 0.70 },
+        { t: 0.9, a1: 6, a2: -3, a3: 3, eye: 1.10 },
+        { t: 1.2, a1: -8, a2: 3, a3: -2, eye: 0.70 },
+        { t: 1.6, a1: 2, a2: -1, a3: 1, eye: 0.95 },
+        { t: 2.4, a1: 0, a2: 0, a3: 0, eye: 0.80 },
+      ] },
+      { name: '归位', dur: 1.2, keys: [
+        { t: 0.0, a1: 0, a2: 0, a3: 0, eye: 0.80 },
+        { t: 1.2, a1: 0, a2: 0, a3: 0, eye: 0.62 },
+      ] },
+    ]
+
+    const mode = working ? WORK : IDLE
+    const totalDur = mode.reduce((s2, m) => s2 + m.dur, 0)
+    const tt = (t * speed) % totalDur
+    let acc = 0
+    let move = mode[mode.length - 1]
+    for (const m of mode) {
+      if (tt < acc + m.dur) { move = m; break }
+      acc += m.dur
     }
-    if (objRoot) objRoot.position.y = baseY + Math.sin(t * 0.7 * speed) * 0.8
+    const mt = tt - acc
+    const keys = move.keys
+    let k = keys.length - 2
+    for (let i = 0; i < keys.length - 1; i += 1) {
+      if (mt < keys[i + 1].t) { k = i; break }
+    }
+    const k0 = keys[k]
+    const k1 = keys[Math.min(k + 1, keys.length - 1)]
+    const span = Math.max(0.001, k1.t - k0.t)
+    const f = Math.min(1, Math.max(0, (mt - k0.t) / span))
+    /* 执行态用「走完再停」的机械缓动，空闲用柔和缓动 */
+    const ease = working
+      ? (f < 0.72 ? (f / 0.72) * (f / 0.72) * (3 - 2 * (f / 0.72)) : 1)
+      : f * f * (3 - 2 * f)
+    const mix = (key) => (k0[key] + (k1[key] - k0[key]) * ease)
+    const frozen = (typeof window !== 'undefined' && window.__freeze__) || jointsDisabled
+    const A1 = frozen ? 0 : (mix('a1') * Math.PI) / 180
+    const A2 = frozen ? 0 : (mix('a2') * Math.PI) / 180
+    const A3 = frozen ? 0 : (mix('a3') * Math.PI) / 180
+    if (armTop) armTop.rotation.set(0, A1, 0)
+    if (armMid) armMid.rotation.set(0, A2, 0)
+    if (armWrist) armWrist.rotation.set(A3, 0, 0)
+
+    /* 红眼：亮度来自脚本，另叠加极轻微呼吸，避免死板 */
+    const eyeBase = frozen ? 0.45 : mix('eye')
+    const breathe = 1 + Math.sin(t * 2.1 * speed) * 0.04
+    const eye = Math.max(0, Math.min(1.3, eyeBase * breathe))
+    if (eyeCore) eyeCore.material.opacity = 0.35 + eye * 0.55
+    if (eyeHalo) {
+      eyeHalo.material.opacity = 0.25 + eye * 0.7
+      const sc = (eyeHalo.userData.base || 40) * (0.82 + eye * 0.25)
+      eyeHalo.scale.setScalar(sc)
+    }
+    if (lensLamp) lensLamp.intensity = (working ? 2.2 : 1.1) * (0.45 + eye * 1.5)
+
     renderer.render(scene, camera)
     if (!healthChecked) {
       healthChecked = true
