@@ -37,7 +37,7 @@ window.__ModuleLoader__.load({
     var ROOT_ID = 'dsh-pet-liang-root'
     var POS_KEY = 'dsh-pet-liang:pos'
     /* 素材改了名字没变，加一个版本号强制浏览器重新取（宿主给的是 immutable 缓存） */
-    var ASSET_V = '3'
+    var ASSET_V = '6'
     var STYLE_ID = 'dsh-pet-liang-style'
 
     /** 四档推理等级对应的称呼与氛围色。 */
@@ -229,17 +229,8 @@ window.__ModuleLoader__.load({
       '#' + ROOT_ID + ' .dpl-figure{position:relative;width:152px;margin-bottom:36px;mix-blend-mode:screen;',
       'animation:dpl-breathe 4.2s ease-in-out infinite;}',
                   '#' + ROOT_ID + '[data-working="1"] .dpl-figure{animation:dpl-breathe 1.9s ease-in-out infinite;}',
-            /* 梁神：用 liang-intensity-calibrator 的原始人像，做成圆形投影徽章 */
-      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:150px;height:150px;object-fit:cover;border-radius:50%;',
-      'border:1px solid color-mix(in srgb,var(--dpl-aura) 52%,transparent);',
-      'box-shadow:0 0 26px color-mix(in srgb,var(--dpl-aura) 34%,transparent),inset 0 0 34px rgba(0,0,0,.55);',
-      '-webkit-mask-image:radial-gradient(circle at 50% 46%,#000 62%,rgba(0,0,0,.72) 78%,transparent 92%);',
-      'mask-image:radial-gradient(circle at 50% 46%,#000 62%,rgba(0,0,0,.72) 78%,transparent 92%);}',
-      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure-wrap{position:relative;}',
-      '#' + ROOT_ID + '[data-character="liang"] .dpl-scanlines{opacity:1;}',
-      '#' + ROOT_ID + ' .dpl-scanlines{position:absolute;left:50%;bottom:12px;width:150px;height:150px;border-radius:50%;',
-      'transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity .3s ease;',
-      'background:repeating-linear-gradient(to bottom,rgba(120,220,255,.13) 0 1px,transparent 1px 3px);mix-blend-mode:screen;}',
+            /* 梁神：透明底立绘，直接浮着（不画圆框、不加背景） */
+      '#' + ROOT_ID + '[data-character="liang"] .dpl-figure{width:auto;max-width:176px;max-height:176px;}',
       '#' + ROOT_ID + ' .dpl-scan{position:absolute;left:50%;bottom:-8px;width:168px;height:186px;transform:translateX(-50%);',
       'overflow:hidden;pointer-events:none;opacity:0;border-radius:50%;}',
       '#' + ROOT_ID + ' .dpl-scan::after{content:"";position:absolute;left:0;width:100%;height:16px;filter:blur(4px);',
@@ -438,11 +429,9 @@ window.__ModuleLoader__.load({
       figure.draggable = false
       figure.setAttribute('data-asset', 'moss-idle.webp')
       figure.setAttribute('data-char', 'moss')
-      var scanlines = el('div', 'dpl-scanlines')
       var scan = el('div', 'dpl-scan')
       stage.appendChild(aura)
       stage.appendChild(figure)
-      stage.appendChild(scanlines)
       stage.appendChild(scan)
 
       var hud = el('div', 'dpl-hud')
@@ -714,6 +703,53 @@ window.__ModuleLoader__.load({
       renderBili()
     }
 
+    /** 把 dsh-bili-widget 的悬浮球藏起来：它和桌宠功能重复，但仍是唤起锚点。 */
+    function ensureBiliChrome() {
+      if (document.getElementById('dsh-pet-liang-bili-chrome')) return
+      var style = document.createElement('style')
+      style.id = 'dsh-pet-liang-bili-chrome'
+      style.textContent =
+        '.dy-launch{opacity:0!important;pointer-events:none!important;box-shadow:none!important;}' +
+        /* 浮窗默认位置由插件自己恢复；桌宠只负责把它拖到桌宠旁边 */
+        '.dy-win{transition:left .0s,top .0s;}'
+      document.head.appendChild(style)
+    }
+
+    /** 用它的拖拽条把浮窗拖到桌宠左侧，避免开在屏幕左上角挡视线。 */
+    function placeBiliWin() {
+      var win = document.querySelector('.dy-win')
+      if (!win || !overlay) return false
+      var header = win.querySelector('.dy-header')
+      if (!header) return false
+      var pet = overlay.getBoundingClientRect()
+      var rect = win.getBoundingClientRect()
+      if (!rect.width || !rect.height) return false
+      var targetLeft = Math.max(12, Math.round(pet.left - rect.width - 18))
+      var targetTop = Math.max(12, Math.round(pet.bottom - rect.height))
+      var dx = Math.round(targetLeft - rect.left)
+      var dy = Math.round(targetTop - rect.top)
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return true
+      var startX = Math.round(rect.left + rect.width / 2)
+      var startY = Math.round(rect.top + 14)
+      try {
+        header.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true, cancelable: true, button: 0, buttons: 1,
+          pointerId: 7777, pointerType: 'mouse', clientX: startX, clientY: startY,
+        }))
+        document.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true, cancelable: true, buttons: 1,
+          pointerId: 7777, pointerType: 'mouse', clientX: startX + dx, clientY: startY + dy,
+        }))
+        document.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true, cancelable: true, button: 0, buttons: 0,
+          pointerId: 7777, pointerType: 'mouse', clientX: startX + dx, clientY: startY + dy,
+        }))
+        return true
+      } catch (e) {
+        return false
+      }
+    }
+
     /**
      * 优先唤起独立的 dsh-bili-widget 插件（完整的 B 站浮窗：频道/搜索/历史/迷你/拉伸）。
      * 它的入口是一个只有 pointerdown/up 的悬浮球，所以这里补发一对指针事件。
@@ -732,8 +768,12 @@ window.__ModuleLoader__.load({
           pointerId: 4242,
           pointerType: 'mouse',
         }
+        ensureBiliChrome()
         launch.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, base)))
         document.dispatchEvent(new PointerEvent('pointerup', Object.assign({ buttons: 0 }, base)))
+        /* 等它渲染出来再摆位置；连点两次时第二次是关闭，不摆 */
+        window.setTimeout(placeBiliWin, 180)
+        window.setTimeout(placeBiliWin, 520)
         return true
       } catch (e) {
         return false
@@ -929,6 +969,18 @@ window.__ModuleLoader__.load({
       }
 
       buildOverlay()
+      ensureBiliChrome()
+      try {
+        if (!window.__dshPetBiliObserver) {
+          var observer = new MutationObserver(function () {
+            if (document.querySelector('.dy-launch')) ensureBiliChrome()
+          })
+          observer.observe(document.body, { childList: true, subtree: true })
+          window.__dshPetBiliObserver = observer
+        }
+      } catch (e) {
+        /* noop */
+      }
       subscribe(function (state) {
         paint(state, true)
       })
