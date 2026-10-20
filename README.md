@@ -81,7 +81,9 @@ npm run preview -- --port 4311   # 浏览器预览：真实 client.js + 真实�
 - 桌宠挂在会话输入区的 dock 座位上，因此"当前会话"指的是你正打开的那个会话；没有会话时显示 MOSS 空闲兜底。
 - 费用是"按价目折算"的核算，不等于账单；企业折扣/协议价请改 `lib/index.js` 的 `PRICES`。
 - 形象切档依赖宿主模型目录里的 `reasoning.efforts`；宿主未暴露该字段时按单档处理。
-- 判定用的 provider/model 会写到浮动层的 `title`（鼠标悬停可见）和 `data-provider` 属性上；判定异常时看控制台 `[dsh-pet-liang] session=… provider=… model=… → liang/moss`。
+- 模型判定优先读**会话投影 `modelSelection`**（`{lastUsed,next}`，durable，不依赖目录异步加载），其次读会话摘要 `summary.projectionValues.modelSelection`，最后才回退模型目录；推理档位在拿不到目录时按档位名兜底排序。
+- 判定结果直接显示在 HUD 右侧的小字（如 `v4.1-flash`）；取不到时显示橙色 `模型未知`。完整判定也写到 `title`（悬停可见）、`data-provider`/`data-tier` 属性与控制台 `[dsh-pet-liang] session=… provider=… model=… effort=… running=… → liang/moss`。
+- 状态桥同时注册在两个座位（`conversation.input.dock` 与 `conversation.session.header.utilities`）互为兜底，任一挂载即可。
 - 单进程、无持久化：拖拽位置等偏好不保存（也不打算加）。
 
 ## 结构

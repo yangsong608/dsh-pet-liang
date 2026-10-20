@@ -196,5 +196,84 @@ check('金额格式化可用', internals.formatCny(0.4) === '¥0.4000' && intern
 const emptyLines = internals.costLines({ ok: false, hint: 'x' })
 check('缺数据不伪造金额', emptyLines.ok === false && emptyLines.total === '—')
 
+/* ── 投影路径：会话投影 modelSelection（{lastUsed,next}）驱动状态 ── */
+
+const sel = internals.preview.selectionFromProjection({
+  lastUsed: { provider: 'deepseek-official', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' },
+  next: null,
+})
+check('投影 lastUsed 能回退取到', !!sel && sel.provider === 'deepseek-official', sel && sel.model)
+check('投影 next 优先于 lastUsed', internals.preview.selectionFromProjection({
+  lastUsed: { provider: 'openai', model: 'gpt-x' },
+  next: { provider: 'deepseek-account', model: 'deepseek-flash', reasoningEffort: 'low' },
+}).provider === 'deepseek-account')
+check('投影缺档位时按 known 档位排序：high → tier4', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'high', efforts: [], defaultEffort: '',
+}) === 4)
+check('投影缺档位：medium → tier3', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'medium', efforts: [], defaultEffort: '',
+}) === 3)
+check('未知档位名落中间档', internals.preview.tierOf({
+  provider: 'deepseek-official', model: 'm', effort: 'weird', efforts: [], defaultEffort: '',
+}) === 2)
+
+/* 用假 hooks 把真实的 Bridge 跑一遍：模拟「会话投影里就是 DeepSeek + high」 */
+function runBridge({ projection, summaryRunning = false, status }) {
+  const effects = []
+  const fake = {
+    createElement() {},
+    useMemo: (fn) => fn(),
+    useEffect: (fn) => effects.push(fn),
+    useRef: (v) => ({ current: v }),
+    useState: (init) => [init, () => {}],
+    useSyncExternalStore: (_sub, read) => read(),
+  }
+  const previous = globalThis.__petReact
+  globalThis.__petReact = fake
+  const source = readFileSync(fileURLToPath(new URL('../client/client.js', import.meta.url)), 'utf8')
+  let mod = null
+  globalThis.window = {
+    __ModuleLoader__: { load: (spec) => { mod = spec.factory(() => fake) } },
+    setTimeout: () => 0,
+    clearTimeout: () => {},
+    localStorage: { getItem: () => null, setItem: () => {} },
+  }
+  /* eslint-disable-next-line no-new-func */
+  new Function(source)()
+  const api = mod.__internals
+  api.preview.bridge({
+    ctx: {},
+    sessionId: 's1',
+    useSessionStatus: (selector) => selector(status),
+    useSessions: (selector) => selector({
+      ids: ['s1'],
+      byId: { s1: { id: 's1', running: summaryRunning, projectionValues: { modelSelection: projection } } },
+    }),
+    useProjection: (key) => (key === 'modelSelection' ? projection : undefined),
+  })
+  /* 真实 React 里 effect 会在提交后执行；这里手动跑一遍 */
+  for (const effect of effects) effect()
+  return api.preview.getState()
+}
+
+const deepseekState = runBridge({
+  projection: { lastUsed: null, next: { provider: 'deepseek-official', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' } },
+  status: new Map(),
+})
+check('Bridge：DeepSeek 投影 → 梁神', deepseekState.character === 'liang' && deepseekState.tier === 4, deepseekState.title + ' / ' + deepseekState.asset)
+
+const runningState = runBridge({
+  projection: { lastUsed: null, next: { provider: 'deepseek-official', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' } },
+  status: new Map([['s1', { running: true }]]),
+})
+check('Bridge：执行中 → MOSS 工作态', runningState.character === 'moss' && runningState.working === true)
+
+const summaryOnly = runBridge({
+  projection: null,
+  summaryRunning: false,
+  status: new Map(),
+})
+check('Bridge：没有投影时不报错（回退 MOSS 空闲）', summaryOnly.character === 'moss')
+
 console.log('\n' + passed + '/' + (passed + failed) + ' 通过')
 if (failed > 0) process.exitCode = 1

@@ -54,6 +54,50 @@ window.__ModuleLoader__.load({
       return Math.min(max, Math.max(min, value))
     }
 
+    /** 推理档位在拿不到模型目录时的兜底排序（0..1）。 */
+    var EFFORT_RANK = {
+      off: 0,
+      none: 0,
+      minimal: 0.15,
+      minimal_effort: 0.15,
+      low: 0.35,
+      medium: 0.55,
+      high: 0.86,
+      xhigh: 1,
+      max: 1,
+      extreme: 1,
+    }
+
+    /**
+     * 会话投影 `modelSelection` → 统一的选择结构。
+     * 投影形状是 { lastUsed, next }，不是裸选择；next 为空就退回 lastUsed。
+     */
+    function selectionFromProjection(value) {
+      if (!value || typeof value !== 'object') return null
+      var picked = value.next || value.lastUsed || null
+      if (!picked || typeof picked !== 'object') return null
+      return {
+        provider: String(picked.provider || ''),
+        model: String(picked.model || ''),
+        effort: String(picked.reasoningEffort || ''),
+        efforts: [],
+        defaultEffort: '',
+        modelLabel: String(picked.model || ''),
+      }
+    }
+
+    /** 档位：优先按模型目录给出的档位序列归一，否则按已知档位名排序。 */
+    function tierOf(selection) {
+      if (!selection) return 2
+      var efforts = selection.efforts || []
+      if (efforts.length > 1) return tierForSelection(selection)
+      var id = String(selection.effort || selection.defaultEffort || '').toLowerCase()
+      if (!id) return 2
+      var ratio = EFFORT_RANK[id]
+      if (ratio === undefined) return 2
+      return 1 + clamp(Math.round(ratio * 3), 0, 3)
+    }
+
     /** 模型目录快照 → 当前选择与可用推理档位。 */
     function readSelection(state) {
       if (!state || typeof state !== 'object') return null
@@ -90,11 +134,11 @@ window.__ModuleLoader__.load({
      * 返回的是「完整可渲染状态」，方便直接 diff。
      */
     function decide(input) {
-      var selection = readSelection(input && input.modelState)
+      var selection = (input && input.selection) || readSelection(input && input.modelState)
       var provider = selection ? selection.provider : ''
       var isDeepSeek = /deepseek/i.test(provider)
       var running = !!(input && input.running)
-      var tier = tierForSelection(selection)
+      var tier = tierOf(selection)
       var meta = LIANG_TIERS[tier - 1]
       var decision = {
         sessionId: (input && input.sessionId) || '',
@@ -258,6 +302,9 @@ window.__ModuleLoader__.load({
       'font-size:11px;letter-spacing:.04em;}',
       '#' + ROOT_ID + ' .dpl-name{font-weight:650;color:var(--dpl-aura);text-shadow:0 0 10px color-mix(in srgb,var(--dpl-aura) 60%,transparent);}',
       '#' + ROOT_ID + ' .dpl-state{opacity:.72;}',
+      '#' + ROOT_ID + ' .dpl-model{max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+      'opacity:.42;font-size:10px;padding-left:4px;border-left:1px solid color-mix(in srgb,var(--dpl-aura) 30%,transparent);}',
+      '#' + ROOT_ID + ' .dpl-model[data-unknown="1"]{opacity:.6;color:#c98b3a;}',
       '#' + ROOT_ID + ' .dpl-dot{width:5px;height:5px;border-radius:50%;background:var(--dpl-aura);opacity:.8;}',
       '#' + ROOT_ID + '[data-working="1"] .dpl-dot{animation:dpl-blink 1.1s ease-in-out infinite;}',
       '#' + ROOT_ID + ' .dpl-cost{position:absolute;right:0;bottom:calc(100% - 10px);width:236px;padding:12px 13px;',
@@ -432,9 +479,11 @@ window.__ModuleLoader__.load({
       var dot = el('span', 'dpl-dot')
       var nameNode = el('span', 'dpl-name', 'MOSS')
       var stateNode = el('span', 'dpl-state', '空闲')
+      var modelNode = el('span', 'dpl-model', '')
       hud.appendChild(dot)
       hud.appendChild(nameNode)
       hud.appendChild(stateNode)
+      hud.appendChild(modelNode)
 
       var cost = el('div', 'dpl-cost')
       cost.hidden = true
@@ -487,10 +536,16 @@ window.__ModuleLoader__.load({
       var figure = overlay.querySelector('.dpl-figure')
       var nameNode = overlay.querySelector('.dpl-name')
       var stateNode = overlay.querySelector('.dpl-state')
+      var modelNode = overlay.querySelector('.dpl-model')
       var aura = overlay.querySelector('.dpl-aura')
 
       if (nameNode) nameNode.textContent = state.title
       if (stateNode) stateNode.textContent = state.subtitle
+      if (modelNode) {
+        var tag = state.model || state.provider || ''
+        modelNode.textContent = tag ? tag.replace(/^deepseek[-_]?/i, '') : '模型未知'
+        modelNode.setAttribute('data-unknown', tag ? '0' : '1')
+      }
       if (aura) aura.style.background = 'radial-gradient(circle,' + state.aura + ' 0%, transparent 68%)'
       if (aura) aura.style.opacity = String(0.3 + state.glow * 0.55)
 
@@ -660,7 +715,16 @@ window.__ModuleLoader__.load({
     function Bridge(props) {
       var sessionId = props.sessionId
       var useSessionStatus = props.useSessionStatus
+      var useSessions = props.useSessions
+      var useProjection = props.useProjection
       var ctx = props.ctx
+
+      /* 运行态：状态表优先，没有就读会话摘要里的 running */
+      var summary = useSessions
+        ? useSessions(function (state) {
+            return state && state.byId ? state.byId[sessionId] : undefined
+          })
+        : undefined
 
       var running = false
       if (useSessionStatus) {
@@ -669,12 +733,31 @@ window.__ModuleLoader__.load({
           var row = map.get(sessionId)
           return !!(row && row.running === true)
         })
+      } else if (summary) {
+        running = summary.running === true
       }
+
+      /* 模型：会话投影是权威来源（durable），不依赖目录异步加载 */
+      var projected = undefined
+      if (useProjection) {
+        try {
+          projected = useProjection('modelSelection')
+        } catch (e) {
+          projected = undefined
+        }
+      }
+      var fromProjection = selectionFromProjection(projected)
+      var fromSummary = selectionFromProjection(
+        summary && summary.projectionValues ? summary.projectionValues.modelSelection : null,
+      )
+      var selection = fromProjection || fromSummary
+
+      /* 目录只用来补「档位序列」，拿不到也不影响判定 */
       var modelState = useModelState(ctx, sessionId)
 
       var decision = useMemo(function () {
-        return decide({ sessionId: sessionId, running: running, modelState: modelState })
-      }, [sessionId, running, modelState])
+        return decide({ sessionId: sessionId, running: running, selection: selection, modelState: modelState })
+      }, [sessionId, running, selection, modelState])
 
       useEffect(function () {
         publish(decision)
@@ -720,22 +803,27 @@ window.__ModuleLoader__.load({
 
       if (!slots || typeof slots.inject !== 'function' || !h) return
 
-      try {
-        slots.inject('conversation.input.dock', function () {
-          return slots.register(
-            {
-              name: 'conversation.input.dock',
-              id: 'dsh-pet-liang-bridge',
-              order: 99,
-            },
-            function PetBridge(props) {
-              return h(Bridge, { ctx: ctx, sessionId: props.sessionId, useSessionStatus: props.useSessionStatus })
-            },
-          )
-        })
-      } catch (e) {
-        /* 该座位不存在时桌宠仍显示默认形态 */
+      function registerBridge(seat, id, order) {
+        try {
+          slots.inject(seat, function () {
+            return slots.register({ name: seat, id: id, order: order }, function PetBridge(props) {
+              return h(Bridge, {
+                ctx: ctx,
+                sessionId: props.sessionId,
+                useSessionStatus: props.useSessionStatus,
+                useSessions: props.useSessions,
+                useProjection: props.useProjection,
+              })
+            })
+          })
+        } catch (e) {
+          /* 该座位不存在就换下一个 */
+        }
       }
+
+      /* 两个座位互为兜底：只要有一个挂着，桌宠就能拿到当前会话 */
+      registerBridge('conversation.input.dock', 'dsh-pet-liang-bridge', 99)
+      registerBridge('conversation.session.header.utilities', 'dsh-pet-liang-bridge-2', 99)
     }
 
     exports.apply = apply
@@ -754,6 +842,9 @@ window.__ModuleLoader__.load({
         getState: getState,
         paint: paint,
         build: buildOverlay,
+        bridge: Bridge,
+        selectionFromProjection: selectionFromProjection,
+        tierOf: tierOf,
       },
     }
     return module.exports
