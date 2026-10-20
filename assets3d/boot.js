@@ -196,6 +196,17 @@ export function createMoss3D(canvas, opts) {
           if (part) p3.attach(part)
         })
 
+        if (typeof window !== 'undefined' && window.__colorParts__) {
+          const tint = (mesh, hex) => { if (mesh) mesh.material = new THREE.MeshBasicMaterial({ color: hex }) }
+          tint(headMesh, 0x8899aa)   /* 固定 */
+          tint(upperMesh, 0xff5533)  /* J1 */
+          tint(foreMesh, 0x33dd77)   /* J2 */
+          tint(handMesh, 0x3399ff)   /* J3 */
+          ;['Moss_Main', 'Moss_Annexes', 'Moss_Glass'].forEach((nm) => {
+            const part = obj.getObjectByName(nm)
+            if (part) { part.material = new THREE.MeshBasicMaterial({ color: 0x3399ff }) }
+          })
+        }
         arm.visible = false
         armTop = p1
         armMid = p2
@@ -264,7 +275,9 @@ export function createMoss3D(canvas, opts) {
     }
     const fovRad = (camera.fov * Math.PI) / 180
     const dist = (size.y / 2) / Math.tan(fovRad / 2) * 1.16
-    camera.position.set(focusX, 0, dist)
+    /* 3/4 视角：正对时绕垂直轴的偏航会变成「往屏幕里外摆」，看不出来 */
+    const AZ = 26 * Math.PI / 180
+    camera.position.set(focusX + Math.sin(AZ) * dist, size.y * 0.06, Math.cos(AZ) * dist)
     camera.lookAt(focusX, 0, 0)
     resize()
     loop()
@@ -287,9 +300,9 @@ export function createMoss3D(canvas, opts) {
       /* 三个关节都绕垂直 Y 轴（与分段处的水平切口垂直，转动不撕开） */
       const POSES = [
         { a1: 0, a2: 0, a3: 0 },
-        { a1: 15, a2: -8, a3: 6 },
-        { a1: -13, a2: 8, a3: -6 },
-        { a1: 6, a2: -3, a3: 2.5 },
+        { a1: 21, a2: -11, a3: 8 },
+        { a1: -18, a2: 11, a3: -8 },
+        { a1: 9, a2: -4, a3: 3 },
         { a1: 0, a2: 0, a3: 0 },
       ]
       const SEG = working ? 1.0 : 1.6
